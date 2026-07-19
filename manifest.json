@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "KABIR DISCORD RULER",
+  "version": "1.0",
+  "description": "Simple sequential automated messaging helper for Discord web.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
