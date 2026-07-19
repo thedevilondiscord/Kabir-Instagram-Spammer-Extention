@@ -1,0 +1,49 @@
+👑 KABIR DISCORD RULER
+A lightweight, automated sequential text engine layout for Discord Web featuring an animated UI banner, automated messaging intervals, burst transmission, and structured text art parsing capabilities.
+
+TO GET ACCESS
+CONTACT @verstappen.org on Discord or arjuniscooll on INSTAGRAM
+
+📥 Installation Guide
+Because this is a custom developer tool, it must be loaded unpacked via your browser's developer interface:
+
+Download the Repository: Click the green Code button at the top of this GitHub page and click Download ZIP.
+
+Extract Files: Unzip the downloaded folder somewhere safe on your desktop. Ensure all 5 core files (manifest.json, popup.html, popup.js, banner.mp4, and AllowedUsersKIS) remain together in the same folder.
+
+Open Extensions Page: Open Google Chrome, Brave, or Microsoft Edge, and navigate to:
+
+chrome://extensions/
+
+Enable Developer Mode: Toggle the Developer mode switch in the top-right corner to ON.
+
+Load the Extension: Click the Load unpacked button in the top-left corner, select your extracted project folder, and click open.
+
+Pin the Tool: Click the extension puzzle piece icon (🧩) next to your browser's search bar and click the pin icon next to KABIR DISCORD RULER to keep it accessible.
+
+🎮 How To Use
+Open Discord Web: Navigate to the Discord web client ([discord.com/app](https://discord.com/app)) in your browser and click into the specific text channel or DM where you want the script to interact.
+
+Launch the Engine: Click the 👑 icon in your browser toolbar to draw the extension interface.
+
+Cloud Authentication Verification:
+
+The tool will automatically check your authorization against the cloud user registry (AllowedUsersKIS).
+
+When prompted, type in your registered Discord username. If your name matches the allowed registry, the "Run Engine" button will instantly unlock.
+
+Configure your Variables:
+
+🎯 Subject Name: Enter a custom string. Any time you include [Subject] in your text fields, it will automatically be replaced with this name when sending.
+
+💬 Messages: Type or paste your message list (one entry per line).
+
+🎨 Text Art Mode: Turn this on if you are pasting complex multiline ASCII text art configurations. Surround your arts with textart{ and }textart boundaries so the script treats the block as a single cohesive block instead of splitting it line-by-line.
+
+💥 Burst Mode: Turn this switch on if you want to push every single message in your current queue sequence into the channel instantly all at once.
+
+⏱️ Message Delay: If Burst Mode is off, specify the custom rest delay (in seconds) the automation engine should wait before pasting the next sequential message.
+
+Trigger Operations: Click Run Engine to begin execution. Click Stop at any point to completely halt text transmission.
+
+⚠️ Important: The browser requires the Discord tab to stay active and selected for the automation macro scripts to inject keystroke inputs cleanly into the chat box container framework.
