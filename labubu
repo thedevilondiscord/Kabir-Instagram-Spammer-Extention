@@ -52,9 +52,6 @@ end
 
 local BoyPfpList = {
     "110388265928893", "95859643981980", "130155182109980", "13256391094", "7141979877", "126321955109144",
-    "105883736105171", "77630895008923", "118862079408453", "106469663951907", "106301311535154",
-    "80256028266444", "80138975757326", "88153948399084", "97074936820513", "122133569226021",
-    "125791648012678", "81831086505070", "89843619861520",
     "105811627876448", "117842977352398", "72892670694166", "83103469598025", "75074160606432", "102436713076194",
     "73360959903200", "8044287275", "75575644706346", "135418144122968", "108362888723956", "72208791847173",
     "126308173151046", "12589564218", "79957717292980", "9167461968", "14958453101", "15812656372",
@@ -1630,84 +1627,6 @@ StickerGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     StickerScroller.CanvasSize = UDim2.new(0, 0, 0, StickerGrid.AbsoluteContentSize.Y + 12)
 end)
 
-
-local AddStickerButton = Instance.new("TextButton")
-AddStickerButton.Name = "AddStickerButton"
-AddStickerButton.Size = UDim2.new(0,70,0,70)
-AddStickerButton.BackgroundColor3 = Color3.fromRGB(35,35,55)
-AddStickerButton.Text = "+"
-AddStickerButton.TextColor3 = Color3.fromRGB(255,255,255)
-AddStickerButton.Font = Enum.Font.GothamBold
-AddStickerButton.TextSize = 40
-AddStickerButton.ZIndex = 27
-AddStickerButton.Parent = StickerScroller
-
-local addCorner = Instance.new("UICorner")
-addCorner.CornerRadius = UDim.new(0,8)
-addCorner.Parent = AddStickerButton
-
-local AddStickerPopup = Instance.new("Frame")
-AddStickerPopup.Size = UDim2.new(0,250,0,130)
-AddStickerPopup.Position = UDim2.new(0.5,-125,0.5,-65)
-AddStickerPopup.BackgroundColor3 = Color3.fromRGB(15,15,25)
-AddStickerPopup.Visible = false
-AddStickerPopup.ZIndex = 50
-AddStickerPopup.Parent = MainFrame
-
-local popupCorner = Instance.new("UICorner")
-popupCorner.CornerRadius = UDim.new(0,10)
-popupCorner.Parent = AddStickerPopup
-
-local StickerIdInput = Instance.new("TextBox")
-StickerIdInput.Size = UDim2.new(1,-20,0,35)
-StickerIdInput.Position = UDim2.new(0,10,0,15)
-StickerIdInput.PlaceholderText = "Enter Decal/Image ID"
-StickerIdInput.Text = ""
-StickerIdInput.TextColor3 = Color3.fromRGB(255,255,255)
-StickerIdInput.BackgroundColor3 = Color3.fromRGB(25,25,38)
-StickerIdInput.ZIndex = 51
-StickerIdInput.Parent = AddStickerPopup
-
-local SaveStickerButton = Instance.new("TextButton")
-SaveStickerButton.Size = UDim2.new(0,100,0,30)
-SaveStickerButton.Position = UDim2.new(0,20,1,-45)
-SaveStickerButton.Text = "SAVE"
-SaveStickerButton.BackgroundColor3 = Color3.fromRGB(220,30,30)
-SaveStickerButton.TextColor3 = Color3.fromRGB(255,255,255)
-SaveStickerButton.ZIndex = 51
-SaveStickerButton.Parent = AddStickerPopup
-
-local CancelStickerButton = Instance.new("TextButton")
-CancelStickerButton.Size = UDim2.new(0,100,0,30)
-CancelStickerButton.Position = UDim2.new(1,-120,1,-45)
-CancelStickerButton.Text = "CANCEL"
-CancelStickerButton.BackgroundColor3 = Color3.fromRGB(50,50,65)
-CancelStickerButton.TextColor3 = Color3.fromRGB(255,255,255)
-CancelStickerButton.ZIndex = 51
-CancelStickerButton.Parent = AddStickerPopup
-
-AddStickerButton.MouseButton1Click:Connect(function()
-    AddStickerPopup.Visible = true
-end)
-
-CancelStickerButton.MouseButton1Click:Connect(function()
-    AddStickerPopup.Visible = false
-end)
-
-SaveStickerButton.MouseButton1Click:Connect(function()
-    local id = StickerIdInput.Text:match("%d+")
-    if id then
-        local url = "rbxthumb://type=Asset&id=" .. id .. "&w=420&h=420"
-        if not table.find(CustomStickerUrls,url) then
-            table.insert(CustomStickerUrls,url)
-            SaveCustomStickers()
-            AddStickerCard(url)
-        end
-        StickerIdInput.Text = ""
-        AddStickerPopup.Visible = false
-    end
-end)
-
 for _, stickerUrl in ipairs(baseStickers) do
     local stickerCard = Instance.new("ImageButton")
     stickerCard.Name = "StickerCard"
@@ -1735,10 +1654,6 @@ for _, stickerUrl in ipairs(baseStickers) do
             if SendChatMessage then SendChatMessage() end
         end
     end)
-end
-
-for _, stickerUrl in ipairs(CustomStickerUrls) do
-    AddStickerCard(stickerUrl)
 end
 
 -- ============================================================================
