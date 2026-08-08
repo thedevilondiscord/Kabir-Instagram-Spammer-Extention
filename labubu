@@ -1765,8 +1765,9 @@ ImportStickerButton.MouseButton1Click:Connect(function()
 end)
 
 SaveStickerButton.MouseButton1Click:Connect(function()
-    local ok, url = AddCustomSticker(StickerInput.Text)
-    if ok then
+    local stickerId = StickerInput.Text:match("%d+")
+    local ok, url = AddCustomSticker(stickerId or "")
+    if ok and url then
         CreateStickerCard(url)
     end
     StickerInput.Text = ""
