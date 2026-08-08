@@ -1702,6 +1702,8 @@ local function CreateStickerCard(stickerUrl)
     end)
 end
 
+end
+
 for _, stickerUrl in ipairs(baseStickers) do
     CreateStickerCard(stickerUrl)
 end
