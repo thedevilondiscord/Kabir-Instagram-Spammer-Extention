@@ -913,7 +913,7 @@ local function AnimateRoleFont(textObject, roleName, style)
     end
 end
 
-local ALL_AUTOCOMPLETE_OPTIONS = { "!tag", "!role", "!spoof", "!invite", "/w " }
+local ALL_AUTOCOMPLETE_OPTIONS = { "!tag", "!role", "!spoof", "/w " }
 local CurrentContextMessage = nil
 local ReplyContextMessage = nil
 local ReplyHighlightToken = 0
@@ -932,7 +932,7 @@ local GlobalCachedMessages, GlobalUIElements = {}, {}
 local ServerCachedMessages, ServerUIElements = {}, {}
 
 local function RefreshAllRoleAutocomplete()
-    local optionsMap = { ["!tag"] = true, ["!role"] = true, ["!spoof"] = true, ["!invite"] = true, ["/w "] = true }
+    local optionsMap = { ["!tag"] = true, ["!role"] = true, ["!spoof"] = true, ["/w "] = true }
    
     for rankName, _ in pairs(RANK_STYLES) do
         optionsMap[rankName] = true
@@ -2108,6 +2108,50 @@ StickerToggleButton.MouseButton1Click:Connect(function()
     StickerPanel.Visible = not StickerPanel.Visible
 end)
 
+-- Server location/share invite button
+local ServerInviteButton = Instance.new("TextButton")
+ServerInviteButton.Name = "ServerInviteButton"
+ServerInviteButton.Size = UDim2.new(0, 34, 1, -8)
+ServerInviteButton.Position = UDim2.new(1, -42, 0, 4)
+ServerInviteButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+ServerInviteButton.BackgroundTransparency = 0.2
+ServerInviteButton.Font = Enum.Font.GothamBold
+ServerInviteButton.Text = "📍"
+ServerInviteButton.TextColor3 = Color3.fromRGB(255,255,255)
+ServerInviteButton.TextSize = 14
+ServerInviteButton.Parent = InputBarFrame
+
+local ServerInviteCorner = Instance.new("UICorner")
+ServerInviteCorner.CornerRadius = UDim.new(0,8)
+ServerInviteCorner.Parent = ServerInviteButton
+
+ServerInviteButton.MouseButton1Click:Connect(function()
+    local targetUser = PrivateModeTargetUsername
+    local targetDisplay = PrivateModeTargetDisplayName
+    local inviteText = "📍 Server Invite from " .. GetFormattedDisplayName(LocalPlayer.DisplayName, true)
+
+    local payload = {
+        ClientMessageId = LocalPlayer.UserId .. "_invite_" .. tostring(os.clock()),
+        Username = LocalPlayer.Name,
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = inviteText,
+        Timestamp = os.time(),
+        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
+        PfpId = CurrentPfpId,
+        IsPrivate = targetUser ~= nil,
+        TargetUsername = targetUser,
+        TargetDisplayName = targetDisplay,
+        ServerInvite = true,
+        PlaceId = game.PlaceId,
+        ServerJobId = SERVER_JOB_ID
+    }
+
+    if targetUser or ActiveTab == "GLOBAL" then
+        local endpoint = (targetUser or ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
+        HttpRequest(endpoint, "POST", payload)
+    end
+end)
+
 PrivateModePill = Instance.new("TextButton")
 PrivateModePill.Name = "PrivateModePill"
 PrivateModePill.Size = UDim2.new(0, 150, 0, 22)
@@ -2695,93 +2739,28 @@ local function CreateMessageCard(msgData, isGlobal)
 
     local isSticker = string.sub(msgData.Text, 1, 11) == "rbxthumb://" or string.sub(msgData.Text, 1, 13) == "rbxassetid://"
 
-    -- Server invite card: global-chat messages can carry a live JobId so
-    -- another player can jump directly into the sender's current server.
-    if msgData.IsServerInvite then
-        local inviteTop = msgData.ReplyToText and 58 or 24
+    if msgData.ServerInvite then
+        local inviteBtn = Instance.new("TextButton")
+        inviteBtn.Name = "ServerInviteButton"
+        inviteBtn.Size = UDim2.new(0, 180, 0, 32)
+        inviteBtn.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 60 or 28)
+        inviteBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+        inviteBtn.BackgroundTransparency = 0.15
+        inviteBtn.Font = Enum.Font.GothamBold
+        inviteBtn.Text = "📍 Join Server Invite"
+        inviteBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        inviteBtn.TextSize = 12
+        inviteBtn.Parent = frame
 
-        local inviteTitle = Instance.new("TextLabel")
-        inviteTitle.Name = "InviteTitle"
-        inviteTitle.Size = UDim2.new(1, -48, 0, 22)
-        inviteTitle.Position = UDim2.new(0, 38, 0, inviteTop)
-        inviteTitle.BackgroundTransparency = 1
-        inviteTitle.Font = Enum.Font.GothamBold
-        inviteTitle.Text = "🌐 Server Invite"
-        inviteTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-        inviteTitle.TextSize = 12
-        inviteTitle.TextXAlignment = Enum.TextXAlignment.Left
-        inviteTitle.Parent = frame
+        local inviteCorner = Instance.new("UICorner")
+        inviteCorner.CornerRadius = UDim.new(0,8)
+        inviteCorner.Parent = inviteBtn
 
-        local inviteInfo = Instance.new("TextLabel")
-        inviteInfo.Name = "InviteInfo"
-        inviteInfo.Size = UDim2.new(1, -48, 0, 34)
-        inviteInfo.Position = UDim2.new(0, 38, 0, inviteTop + 22)
-        inviteInfo.BackgroundTransparency = 1
-        inviteInfo.Font = Enum.Font.Gotham
-        inviteInfo.Text = "Join " .. TruncateText(tostring(msgData.DisplayName or msgData.Username or "this player"), 20) .. "'s current server"
-        inviteInfo.TextColor3 = Color3.fromRGB(200, 200, 215)
-        inviteInfo.TextSize = 10
-        inviteInfo.TextXAlignment = Enum.TextXAlignment.Left
-        inviteInfo.TextWrapped = true
-        inviteInfo.Parent = frame
-
-        local joinButton = Instance.new("TextButton")
-        joinButton.Name = "JoinServerButton"
-        joinButton.Size = UDim2.new(0, 130, 0, 28)
-        joinButton.Position = UDim2.new(0, 38, 0, inviteTop + 58)
-        joinButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-        joinButton.BackgroundTransparency = 0.05
-        joinButton.BorderSizePixel = 0
-        joinButton.Font = Enum.Font.GothamBold
-        joinButton.Text = "JOIN SERVER"
-        joinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        joinButton.TextSize = 10
-        joinButton.AutoButtonColor = true
-        joinButton.ZIndex = 12
-        joinButton.Parent = frame
-
-        local joinCorner = Instance.new("UICorner")
-        joinCorner.CornerRadius = UDim.new(0, 7)
-        joinCorner.Parent = joinButton
-
-        local joinStroke = Instance.new("UIStroke")
-        joinStroke.Thickness = 1
-        joinStroke.Color = Color3.fromRGB(255, 90, 90)
-        joinStroke.Transparency = 0.35
-        joinStroke.Parent = joinButton
-
-        joinButton.MouseButton1Click:Connect(function()
-            local placeId = tonumber(msgData.PlaceId)
-            local jobId = tostring(msgData.ServerJobId or "")
-
-            if not placeId or jobId == "" then
-                joinButton.Text = "INVITE EXPIRED"
-                return
-            end
-
-            if game.JobId ~= "" and jobId == game.JobId then
-                joinButton.Text = "ALREADY HERE"
-                task.delay(1.5, function()
-                    if joinButton and joinButton.Parent then joinButton.Text = "JOIN SERVER" end
-                end)
-                return
-            end
-
-            joinButton.Text = "JOINING..."
-            local ok = pcall(function()
-                TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+        inviteBtn.MouseButton1Click:Connect(function()
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(msgData.PlaceId, msgData.ServerJobId, LocalPlayer)
             end)
-            if not ok then
-                joinButton.Text = "JOIN FAILED"
-                task.delay(1.5, function()
-                    if joinButton and joinButton.Parent then joinButton.Text = "JOIN SERVER" end
-                end)
-            end
         end)
-
-        -- The transparent message interaction layer is created below. Keep the
-        -- button above it so the explicit Join action remains clickable.
-        frame:SetAttribute("ServerInvite", true)
     end
 
     if isSticker then
@@ -3010,46 +2989,6 @@ SendChatMessage = function()
     elseif not isPrivate and typedText == "!spoof" then
         ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !spoof [NewName].", true)
         MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!invite" then
-        if ActiveTab ~= "GLOBAL" then
-            ShowLocalSystemMessage("[AI MoD] : Server invites can only be sent from Global Chat.", true)
-            MessageInput.Text = ""
-            return
-        end
-
-        if game.JobId == "" then
-            ShowLocalSystemMessage("[AI MoD] : Server invites are unavailable in Studio/local server testing.", true)
-            MessageInput.Text = ""
-            return
-        end
-
-        local inviteMessageId = LocalPlayer.UserId .. "_INVITE_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999))
-        local invitePayload = {
-            ClientMessageId = inviteMessageId,
-            Username = LocalPlayer.Name,
-            DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-            Text = "invited everyone to join their current server",
-            Timestamp = os.time(),
-            Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
-            PfpId = CurrentPfpId,
-            IsPrivate = false,
-            IsServerInvite = true,
-            PlaceId = game.PlaceId,
-            ServerJobId = game.JobId,
-        }
-
-        GlobalCachedMessages["local_" .. inviteMessageId] = invitePayload
-        local inviteCard = CreateMessageCard(invitePayload, true)
-        inviteCard.Visible = true
-        table.insert(GlobalUIElements, inviteCard)
-        MessageInput.Text = ""
-
-        task.spawn(function()
-            pcall(function()
-                HttpRequest(GLOBAL_MESSAGES_ENDPOINT, "POST", invitePayload)
-            end)
-        end)
         return
     elseif not isPrivate and string.sub(typedText, 1, 1) == "!" then
         ShowLocalSystemMessage("[AI MoD] : Unknown command. Command failed.", true)
