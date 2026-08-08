@@ -78,7 +78,7 @@ local GirlPfpList = {
     "132498447517240", "14365830804", "14133573570", "84575585234733", "14740456559"
 }
 
--- Helper function to truncate DisplayName to 14 chars + "..." if over 15 chars
+-- Helper function to truncate DisplayName to 20 chars + "..." if over 20 chars
 local function GetFormattedDisplayName(displayName, isClient)
     if isClient then
         displayName = SpoofedDisplayName or displayName or ""
@@ -86,8 +86,8 @@ local function GetFormattedDisplayName(displayName, isClient)
         displayName = displayName or ""
     end
    
-    if string.len(displayName) > 15 then
-        return string.sub(displayName, 1, 14) .. "..."
+    if string.len(displayName) > 20 then
+        return string.sub(displayName, 1, 20) .. "..."
     end
     return displayName
 end
@@ -466,8 +466,6 @@ local GITHUB_ROLE_LIST_URL = "https://github.com/thedevilondiscord/GC/raw/refs/h
 local GITHUB_RANK_STYLES_URL = "https://raw.githubusercontent.com/thedevilondiscord/GC/refs/heads/main/GC_Roles.json"
 
 local JOIN_SOUND_ID = "rbxassetid://7460825623"
-local NOTIFICATION_SOUND_ID = "rbxassetid://107978604605265"
-local JoinEventId = LocalPlayer.UserId .. "_" .. tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999))
 
 local ActiveTab = "GLOBAL"
 
@@ -746,10 +744,10 @@ baseStickers = uniqueStickers
 -- HARDCODED RANKS & DEFAULT STYLES
 -- ============================================================================
 local RANK_STYLES = {
-["Architect"]          = { Start = Color3.fromRGB(255, 0, 0),    End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 0, 0),    Speed = 1.5, IsAdmin = true },
-["Overseer"]           = { Start = Color3.fromRGB(255, 0, 0),    End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 0, 0),    Speed = 1.5, IsAdmin = true },
+["Architect"]          = { Start = Color3.fromRGB(255, 30, 30),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 30, 30),   Speed = 1.5, IsAdmin = true },
+["Overseer"]           = { Start = Color3.fromRGB(255, 30, 30),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 30, 30),   Speed = 1.5, IsAdmin = true },
 ["Critic"]             = { Start = Color3.fromRGB(30, 144, 255),  End = Color3.fromRGB(0, 0, 139),     Name = Color3.fromRGB(30, 144, 255),  Speed = 1.5, IsAdmin = true },
-["Recruit"]            = { Start = Color3.fromRGB(255, 255, 255), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.2 },
+["Recruit"]            = { Start = Color3.fromRGB(255, 105, 180), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 105, 180), Speed = 1.2 },
 ["Agent"]              = { Start = Color3.fromRGB(0, 191, 255),   End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(0, 191, 255),   Speed = 1.2 },
 ["Regent of Codes"]    = { Start = Color3.fromRGB(30, 255, 30),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(30, 255, 30),   Speed = 1.2 },
 ["Regent of Clans"]    = { Start = Color3.fromRGB(255, 215, 0),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 215, 0),   Speed = 1.2 },
@@ -760,15 +758,15 @@ local RANK_STYLES = {
 ["Dark Passenger"]     = { Start = Color3.fromRGB(128, 0, 32),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(128, 0, 32),   Speed = 2.0 },
 ["Obsession"]          = { Start = Color3.fromRGB(112, 128, 144), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 255, 255), Speed = 1.5 },
 ["Soul Reaper"]        = { Start = Color3.fromRGB(0, 255, 255),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(0, 255, 255),   Speed = 1.5 },
-["Infinite Void"]      = { Start = Color3.fromRGB(115, 70, 255), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(135, 95, 255), Speed = 1.0 },
+["Infinite Void"]      = { Start = Color3.fromRGB(75, 0, 130),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(75, 0, 130),   Speed = 1.0 },
 ["Hunter"]             = { Start = Color3.fromRGB(255, 69, 0),   End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.5 },
-["Hokage"]             = { Start = Color3.fromRGB(70, 190, 255), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(95, 205, 255), Speed = 1.5 },
+["Hokage"]             = { Start = Color3.fromRGB(135, 206, 235), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(135, 206, 235), Speed = 1.5 },
 ["Pirate Emperor"]     = { Start = Color3.fromRGB(64, 224, 208),  End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(64, 224, 208),  Speed = 1.5 },
-["KIRA"]               = { Start = Color3.fromRGB(105, 120, 135), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(225, 235, 245), Speed = 1.0 },
+["KIRA"]               = { Start = Color3.fromRGB(54, 69, 79),   End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
 ["Overlord"]           = { Start = Color3.fromRGB(0, 255, 255),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(0, 255, 255),   Speed = 1.5 },
 ["Jobless Sage"]       = { Start = Color3.fromRGB(138, 43, 226),  End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
 ["Saiyan"]             = { Start = Color3.fromRGB(0, 191, 255),   End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.5 },
-["Monarch"]            = { Start = Color3.fromRGB(35, 85, 255), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(70, 115, 255), Speed = 1.0 },
+["Monarch"]            = { Start = Color3.fromRGB(0, 0, 139),    End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(0, 0, 139),     Speed = 1.0 },
 ["Devil"]              = { Start = Color3.fromRGB(183, 65, 14),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(183, 65, 14),   Speed = 1.5 },
 ["Hashira"]            = { Start = Color3.fromRGB(0, 128, 128),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(0, 128, 128),   Speed = 1.5 },
 ["Heroic"]             = { Start = Color3.fromRGB(255, 140, 0),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 140, 0),   Speed = 1.5 },
@@ -783,7 +781,7 @@ local RANK_STYLES = {
 ["Malkin"]             = { Start = Color3.fromRGB(255, 0, 255),   End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 182, 193), Speed = 1.0 },
 ["Badmosh"]            = { Start = Color3.fromRGB(255, 255, 0),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 255, 0),   Speed = 1.5 },
 ["Badnam"]             = { Start = Color3.fromRGB(255, 219, 88),  End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(255, 219, 88),  Speed = 2.0 },
-["Batman"]             = { Start = Color3.fromRGB(55, 75, 190), End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(85, 105, 230), Speed = 1.5 },
+["Batman"]             = { Start = Color3.fromRGB(25, 25, 112),   End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(25, 25, 112),   Speed = 1.5 },
 ["Homelander"]         = { Start = Color3.fromRGB(0, 33, 165),    End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
 ["Viltramite"]         = { Start = Color3.fromRGB(0, 71, 171),    End = Color3.fromRGB(0, 0, 0),       Name = Color3.fromRGB(0, 71, 171),    Speed = 1.5 },
 
@@ -803,125 +801,7 @@ local RANK_STYLES = {
 ["STEPDADDY"]          = { Start = Color3.fromRGB(255, 69, 0),    End = Color3.fromRGB(47, 79, 79),    Name = Color3.fromRGB(255, 99, 71),   Speed = 1.5 },
 }
 
--- ============================================================================
--- ROLE/TAG FONT ANIMATION
--- The entire role-name font smoothly transitions between its assigned colours.
--- The profile below is intentionally separate from remotely-fetched rank styles
--- so these animation preferences cannot be overwritten by remote style refreshes.
--- ============================================================================
-local ROLE_FONT_ANIMATION = {
-    ["Dark Passenger"] = { Speed = "Flashing" },
-    ["Obsession"] = { Speed = "Medium" },
-    ["Soul Reaper"] = { Speed = "Fast" },
-    ["Infinite Void"] = { Speed = "Slow" },
-    ["Hunter"] = { Speed = "Fast" },
-    ["Hokage"] = { Speed = "Medium" },
-    ["Pirate Emperor"] = { Speed = "Fast" },
-    ["KIRA"] = { Speed = "Slow" },
-    ["Overlord"] = { Speed = "Medium" },
-    ["Jobless Sage"] = { Speed = "Slow" },
-    ["Saiyan"] = { Speed = "Fast" },
-    ["Monarch"] = { Speed = "Slow" },
-    ["Devil"] = { Speed = "Fast" },
-    ["Hashira"] = { Speed = "Fast" },
-    ["Heroic"] = { Speed = "Fast" },
-    ["Conqueror"] = { Speed = "Medium" },
-    ["Warlord"] = { Speed = "Fast" },
-    ["Psychopath"] = { Speed = "Flashing" },
-    ["Manipulator"] = { Speed = "Flashing" },
-    ["Narcissist"] = { Speed = "Fast" },
-    ["Com-God"] = { Speed = "Slow" },
-    ["Disbander"] = { Speed = "Medium" },
-    ["Lover"] = { Speed = "Slow" },
-    ["Malkin"] = { Speed = "Slow", SoftPulse = true },
-    ["Badmosh"] = { Speed = "Fast" },
-    ["Badnam"] = { Speed = "Flashing" },
-    ["Batman"] = { Speed = "Medium" },
-    ["Homelander"] = { Speed = "Slow" },
-    ["Viltramite"] = { Speed = "Medium" },
-    ["Architect"] = { Speed = "Medium" },
-    ["Overseer"] = { Speed = "Medium" },
-    ["Regent of Codes"] = { Speed = "Medium" },
-    ["Regent of Clans"] = { Speed = "Medium" },
-    ["Regent of Havoc"] = { Speed = "Medium" },
-    ["HACKER"] = { Speed = "Fast" },
-}
-
-local ROLE_FONT_SPEED = {
-    Flashing = 0.35,
-    Fast = 0.80,
-    Medium = 1.40,
-    Slow = 2.40,
-}
-
-local function AnimateRoleFont(textObject, roleName, style)
-    if not textObject or not textObject.Parent then return end
-
-    local profile = ROLE_FONT_ANIMATION[roleName]
-    local duration = ROLE_FONT_SPEED[(profile and profile.Speed) or "Medium"] or 1.4
-    local startColor = style.Start
-    local endColor = style.End
-
-    -- TextColor3 is animated rather than using a moving UIGradient, so the
-    -- complete role name changes colour together instead of only a portion.
-    textObject.TextColor3 = startColor
-
-    task.spawn(function()
-        while textObject and textObject.Parent do
-            local toEnd = TweenService:Create(
-                textObject,
-                TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                {TextColor3 = endColor}
-            )
-            toEnd:Play()
-            toEnd.Completed:Wait()
-            if not textObject or not textObject.Parent then break end
-
-            local toStart = TweenService:Create(
-                textObject,
-                TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                {TextColor3 = startColor}
-            )
-            toStart:Play()
-            toStart.Completed:Wait()
-        end
-    end)
-
-    -- Malkin keeps the requested feminine/soft exception with a subtle glow
-    -- pulse layered on top of the colour transition.
-    if profile and profile.SoftPulse then
-        task.spawn(function()
-            while textObject and textObject.Parent do
-                local pulseOut = TweenService:Create(
-                    textObject,
-                    TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {TextTransparency = 0.12}
-                )
-                pulseOut:Play()
-                pulseOut.Completed:Wait()
-                if not textObject or not textObject.Parent then break end
-
-                local pulseIn = TweenService:Create(
-                    textObject,
-                    TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {TextTransparency = 0}
-                )
-                pulseIn:Play()
-                pulseIn.Completed:Wait()
-            end
-        end)
-    end
-end
-
 local ALL_AUTOCOMPLETE_OPTIONS = { "!tag", "!role", "!spoof", "/w " }
-local CurrentContextMessage = nil
-local ReplyContextMessage = nil
-local ReplyHighlightToken = 0
-local PrivateModeTargetUsername = nil
-local PrivateModeTargetDisplayName = nil
-local PrivateModePill = nil
-local RefreshReplyUI = function() end
-local ClearPersistentPrivatePrefix = function() end
 
 local AssignedPlayerRoles = {}
 local AvailableUserRoles = {}
@@ -970,9 +850,6 @@ end
 local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
-    if data and (method == "POST" or method == "PUT" or method == "PATCH") and data.Timestamp == nil then
-        data.Timestamp = os.time()
-    end
     if not http_req then return nil end
     local success, response = pcall(function()
         return http_req({
@@ -1002,7 +879,7 @@ local function GetAssignedOrCalculatedRole(username)
 
     local playerObj = Players:FindFirstChild(username)
 
-    if username == "KABIR" then
+    if username == "Kabir_Priv" then
         return "Architect"
     end
 
@@ -1025,10 +902,16 @@ end
 local function CanUseSpoof(username)
     local role = GetAssignedOrCalculatedRole(username)
     local allowedRoles = {
-        ["COM-GOD"] = true,
         ["ARCHITECT"] = true,
         ["OVERSEER"] = true,
-        ["HACKER"] = true
+        ["HACKER"] = true,
+        ["SERIAL KILLER🔪"] = true,
+        ["SERIAL KILLER"] = true,
+        ["EMPERROR👑"] = true,
+        ["EMPERROR"] = true,
+        ["GOD"] = true,
+        ["COM-GOD"] = true,
+        ["COM GOD"] = true
     }
     return allowedRoles[string.upper(role)] == true
 end
@@ -1105,25 +988,6 @@ BlurEffect.InFocusRadius = 30
 BlurEffect.NearIntensity = 0.75
 BlurEffect.Parent = Lighting
 
--- KABIR rainbow loop (About tab only)
-task.spawn(function()
-    local hue = 0
-    while true do
-        task.wait(0.03)
-        if not script.Parent then break end
-        hue = (hue + 0.008) % 1
-        local found = false
-        for _, obj in ipairs(script.Parent:GetDescendants()) do
-            if obj:IsA("TextLabel") and obj.Text == "KABIR" then
-                obj.TextColor3 = Color3.fromHSV(hue, 0.9, 1)
-                found = true
-                break
-            end
-        end
-        if not found then break end
-    end
-end)
-
 ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Kronos_Chat_Gui"
 ScreenGui.ResetOnSpawn = false
@@ -1134,9 +998,7 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 450, 0, 320)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Position = UDim2.new(0.02, 0, 0.55, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 MainFrame.BackgroundTransparency = 0.35
 MainFrame.BorderSizePixel = 0
@@ -1279,125 +1141,28 @@ end)
 
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ChatToggleButton"
-ToggleButton.Size = UDim2.new(0, 116, 0, 40)
+ToggleButton.Size = UDim2.new(0, 110, 0, 38)
 ToggleButton.Position = UDim2.new(0.02, 0, 0.5, 0)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-ToggleButton.BackgroundTransparency = 0.25
+ToggleButton.BackgroundTransparency = 0.35
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "  ◈  KRONOS"
+ToggleButton.Text = "  KRONOS"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 11
-ToggleButton.AutoButtonColor = false
+ToggleButton.TextSize = 12
 ToggleButton.Visible = true
-ToggleButton.ZIndex = 200
 ToggleButton.Parent = ScreenGui
 
 local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 13)
+ToggleCorner.CornerRadius = UDim.new(0, 12)
 ToggleCorner.Parent = ToggleButton
 
 local ToggleStroke = Instance.new("UIStroke")
 ToggleStroke.Thickness = 2.5
 ToggleStroke.Color = Color3.fromRGB(255, 0, 0)
-ToggleStroke.Transparency = 0.15
 ToggleStroke.Parent = ToggleButton
 
-local ToggleScale = Instance.new("UIScale")
-ToggleScale.Parent = ToggleButton
-
-local MainScale = Instance.new("UIScale")
-MainScale.Parent = MainFrame
-
-local ChatOriginalPosition = MainFrame.Position
-local ChatHiddenPosition = ChatOriginalPosition + UDim2.new(0, 0, 0, 55)
-local ChatIsShown = true
-local ChatTransitionBusy = false
-
-ToggleButton.MouseEnter:Connect(function()
-    TweenService:Create(
-        ToggleScale,
-        TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Scale = 1.06}
-    ):Play()
-end)
-
-ToggleButton.MouseLeave:Connect(function()
-    TweenService:Create(
-        ToggleScale,
-        TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Scale = 1}
-    ):Play()
-end)
-
-task.spawn(function()
-    while ToggleButton.Parent do
-        TweenService:Create(
-            ToggleStroke,
-            TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.55}
-        ):Play()
-        task.wait(0.8)
-        TweenService:Create(
-            ToggleStroke,
-            TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.12}
-        ):Play()
-        task.wait(0.8)
-    end
-end)
-
-local function SetChatVisibility(show)
-    if ChatTransitionBusy then return end
-    ChatTransitionBusy = true
-
-    if show then
-        ChatIsShown = true
-        MainFrame.Visible = true
-        MainFrame.Position = ChatHiddenPosition
-        MainScale.Scale = 0.72
-
-        local move = TweenService:Create(
-            MainFrame,
-            TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-            {Position = ChatOriginalPosition}
-        )
-        local scale = TweenService:Create(
-            MainScale,
-            TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Scale = 1}
-        )
-        move:Play()
-        scale:Play()
-        move.Completed:Wait()
-        ToggleButton.Text = "  ◈  KRONOS"
-    else
-        ChatIsShown = false
-
-        local move = TweenService:Create(
-            MainFrame,
-            TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
-            {Position = ChatHiddenPosition}
-        )
-        local scale = TweenService:Create(
-            MainScale,
-            TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
-            {Scale = 0.72}
-        )
-        move:Play()
-        scale:Play()
-        move.Completed:Wait()
-
-        if not ChatIsShown then
-            MainFrame.Visible = false
-        end
-        ToggleButton.Text = "  ◇  KRONOS"
-    end
-
-    ChatTransitionBusy = false
-end
-
 ToggleButton.MouseButton1Click:Connect(function()
-    SetChatVisibility(not ChatIsShown)
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
 local MessageContainer = Instance.new("ScrollingFrame")
@@ -1431,42 +1196,18 @@ NotifContainerFrame.ZIndex = 100
 NotifContainerFrame.Parent = ScreenGui
 
 local ActiveNotifBtn = nil
-local ShownNotificationIds = {}
 
-local function PlayNotificationSound(soundId)
-    local sound = Instance.new("Sound")
-    sound.Name = "KronosNotificationSound"
-    sound.SoundId = soundId or NOTIFICATION_SOUND_ID
-    sound.Volume = 0.65
-    sound.Parent = ScreenGui
-    pcall(function() sound:Play() end)
-    sound.Ended:Connect(function()
-        if sound then sound:Destroy() end
-    end)
-    task.delay(8, function()
-        if sound and sound.Parent then sound:Destroy() end
-    end)
-end
-
-local function DisplayNewMessageNotif(msgData, messageId)
-    if not msgData then return end
-    if msgData.IsPrivate and msgData.Username ~= LocalPlayer.Name and msgData.TargetUsername ~= LocalPlayer.Name then return end
-    if msgData.Username == LocalPlayer.Name and not msgData.IsJoinMessage then return end
-
-    messageId = tostring(messageId or ((msgData.JoinEventId or "") .. "_" .. (msgData.Timestamp or "") .. "_" .. (msgData.Username or "")))
-    if ShownNotificationIds[messageId] then return end
-    ShownNotificationIds[messageId] = true
+local function DisplayNewMessageNotif(msgData)
+    if msgData.Username == LocalPlayer.Name or msgData.IsPrivate then return end
 
     local rawName = msgData.DisplayName or msgData.Username or "Unknown"
     local isClient = (msgData.Username == LocalPlayer.Name)
-    local formattedName = GetFormattedDisplayName(rawName, isClient)
+    local formattedName = TruncateText(GetFormattedDisplayName(rawName, isClient), 20)
     local rawText = msgData.Text or ""
-    if msgData.IsJoinMessage then
-        rawText = "has Joined the Server Chat"
-    elseif string.sub(rawText, 1, 11) == "rbxthumb://" or string.sub(rawText, 1, 13) == "rbxassetid://" then
+    if string.sub(rawText, 1, 11) == "rbxthumb://" or string.sub(rawText, 1, 13) == "rbxassetid://" then
         rawText = "[Sticker]"
     end
-    local formattedMsg = TruncateText(rawText, 34)
+    local formattedMsg = TruncateText(rawText, 30)
 
     if ActiveNotifBtn and ActiveNotifBtn.Parent then
         ActiveNotifBtn:Destroy()
@@ -1475,114 +1216,74 @@ local function DisplayNewMessageNotif(msgData, messageId)
 
     local notifBtn = Instance.new("TextButton")
     notifBtn.Name = "MessageNotification"
-    notifBtn.Size = UDim2.new(0, 360, 0, 54)
-    notifBtn.Position = UDim2.new(0, 0, -1, 0)
-    notifBtn.AnchorPoint = Vector2.new(0, 0)
+    notifBtn.Size = UDim2.new(1, 0, 1, 0)
+    notifBtn.Position = UDim2.new(0, 0, -0.5, 0)
     notifBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-    notifBtn.BackgroundTransparency = 0.22
+    notifBtn.BackgroundTransparency = 0.35
     notifBtn.BorderSizePixel = 0
-    notifBtn.Text = ""
-    notifBtn.AutoButtonColor = false
+    notifBtn.Font = Enum.Font.GothamBold
+    notifBtn.Text = string.format("💬 %s : %s", formattedName, formattedMsg)
+    notifBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    notifBtn.TextSize = 12
+    notifBtn.TextWrapped = true
     notifBtn.ZIndex = 101
     notifBtn.Parent = NotifContainerFrame
 
     local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 12)
+    notifCorner.CornerRadius = UDim.new(0, 8)
     notifCorner.Parent = notifBtn
 
     local notifStroke = Instance.new("UIStroke")
-    notifStroke.Thickness = 1.8
-    notifStroke.Transparency = 0.1
+    notifStroke.Thickness = 1.5
+    notifStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    notifStroke.Color = Color3.fromRGB(255, 255, 255)
     notifStroke.Parent = notifBtn
 
     local notifGradient = Instance.new("UIGradient")
-    if msgData.IsJoinMessage then
-        notifGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-            ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
-            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
-            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
-            ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 255, 255)),
-            ColorSequenceKeypoint.new(0.83, Color3.fromRGB(80, 100, 255)),
-            ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 255)),
-        })
-    else
-        notifGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 40)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 30)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 40, 40)),
-        })
-    end
+    notifGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+    })
     notifGradient.Parent = notifStroke
-
-    local notifPfp = Instance.new("ImageLabel")
-    notifPfp.Name = "NotificationPFP"
-    notifPfp.Size = UDim2.new(0, 38, 0, 38)
-    notifPfp.Position = UDim2.new(0, 8, 0.5, -19)
-    notifPfp.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    notifPfp.BackgroundTransparency = 0.08
-    notifPfp.Image = "rbxthumb://type=Asset&id=" .. tostring(msgData.PfpId or DefaultPfpId) .. "&w=150&h=150"
-    notifPfp.ZIndex = 102
-    notifPfp.Parent = notifBtn
-
-    local pfpCorner = Instance.new("UICorner")
-    pfpCorner.CornerRadius = UDim.new(1, 0)
-    pfpCorner.Parent = notifPfp
-
-    local pfpStroke = Instance.new("UIStroke")
-    pfpStroke.Thickness = 1.2
-    pfpStroke.Color = msgData.IsJoinMessage and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 55, 55)
-    pfpStroke.Transparency = 0.15
-    pfpStroke.Parent = notifPfp
-
-    local notifText = Instance.new("TextLabel")
-    notifText.Size = UDim2.new(1, -58, 1, -8)
-    notifText.Position = UDim2.new(0, 54, 0, 4)
-    notifText.BackgroundTransparency = 1
-    notifText.Font = Enum.Font.GothamBold
-    notifText.Text = msgData.IsJoinMessage and (formattedName .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
-    notifText.TextColor3 = Color3.fromRGB(245, 245, 250)
-    notifText.TextSize = 11
-    notifText.TextWrapped = true
-    notifText.TextXAlignment = Enum.TextXAlignment.Left
-    notifText.TextYAlignment = Enum.TextYAlignment.Center
-    notifText.ZIndex = 102
-    notifText.Parent = notifBtn
 
     task.spawn(function()
         while notifBtn and notifBtn.Parent do
             local dt = RunService.RenderStepped:Wait()
-            notifGradient.Rotation = (notifGradient.Rotation + (65 * dt)) % 360
+            notifGradient.Rotation = (notifGradient.Rotation + (60 * dt)) % 360
         end
     end)
 
     ActiveNotifBtn = notifBtn
-    PlayNotificationSound(msgData.IsJoinMessage and JOIN_SOUND_ID or NOTIFICATION_SOUND_ID)
 
-    TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+    TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Position = UDim2.new(0, 0, 0, 0)
     }):Play()
 
     task.delay(3.5, function()
         if ActiveNotifBtn == notifBtn and notifBtn and notifBtn.Parent then
             ActiveNotifBtn = nil
-            local slideOut = TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            local slideOut = TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 Position = UDim2.new(0, 0, -1, 0)
             })
             slideOut:Play()
             slideOut.Completed:Wait()
-            if notifBtn and notifBtn.Parent then notifBtn:Destroy() end
+            if notifBtn and notifBtn.Parent then
+                notifBtn:Destroy()
+            end
         end
     end)
 
-    notifBtn.Activated:Connect(function()
+    notifBtn.MouseButton1Click:Connect(function()
         if ActiveNotifBtn == notifBtn then ActiveNotifBtn = nil end
         local slideOut = TweenService:Create(notifBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Position = UDim2.new(0, 0, -1, 0)
         })
         slideOut:Play()
         slideOut.Completed:Wait()
-        if notifBtn and notifBtn.Parent then notifBtn:Destroy() end
+        if notifBtn and notifBtn.Parent then
+            notifBtn:Destroy()
+        end
     end)
 end
 
@@ -1886,7 +1587,6 @@ local function PopulateTagBar()
         tagBtn.TextColor3 = style.Start
         tagBtn.TextSize = 10
         tagBtn.Parent = TagScrollFrame
-        AnimateRoleFont(tagBtn, roleName, style)
 
         local tagCorner = Instance.new("UICorner")
         tagCorner.CornerRadius = UDim.new(0, 6)
@@ -2068,7 +1768,7 @@ InputCorner.Parent = InputBarFrame
 
 MessageInput = Instance.new("TextBox")
 MessageInput.Name = "MessageInput"
-MessageInput.Size = UDim2.new(1, -95, 1, -8)
+MessageInput.Size = UDim2.new(1, -135, 1, -8)
 MessageInput.Position = UDim2.new(0, 10, 0, 4)
 MessageInput.BackgroundTransparency = 1
 MessageInput.Font = Enum.Font.GothamMedium
@@ -2097,6 +1797,23 @@ local StickerToggleCorner = Instance.new("UICorner")
 StickerToggleCorner.CornerRadius = UDim.new(0, 8)
 StickerToggleCorner.Parent = StickerToggleButton
 
+-- Server invite/share button (Global Chat only)
+local ServerInviteButton = Instance.new("TextButton")
+ServerInviteButton.Name = "ServerInviteButton"
+ServerInviteButton.Size = UDim2.new(0, 34, 1, -8)
+ServerInviteButton.Position = UDim2.new(1, -118, 0, 4)
+ServerInviteButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+ServerInviteButton.BackgroundTransparency = 0.15
+ServerInviteButton.Font = Enum.Font.GothamBold
+ServerInviteButton.Text = "📍"
+ServerInviteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ServerInviteButton.TextSize = 15
+ServerInviteButton.Parent = InputBarFrame
+
+local ServerInviteCorner = Instance.new("UICorner")
+ServerInviteCorner.CornerRadius = UDim.new(0, 8)
+ServerInviteCorner.Parent = ServerInviteButton
+
 local emojiList = {"😁","😀","😉","🥰","🤩","🤗","😎","😥","😣","🤔","😫","🤤","😭","😨","😮‍💨","🤑"}
 task.spawn(function()
     local idx = 1
@@ -2109,77 +1826,6 @@ end)
 
 StickerToggleButton.MouseButton1Click:Connect(function()
     StickerPanel.Visible = not StickerPanel.Visible
-end)
-
-PrivateModePill = Instance.new("TextButton")
-PrivateModePill.Name = "PrivateModePill"
-PrivateModePill.Size = UDim2.new(0, 150, 0, 22)
-PrivateModePill.Position = UDim2.new(0, 8, 0, -25)
-PrivateModePill.BackgroundColor3 = Color3.fromRGB(150, 25, 35)
-PrivateModePill.BackgroundTransparency = 0.12
-PrivateModePill.Font = Enum.Font.GothamBold
-PrivateModePill.Text = "PVT"
-PrivateModePill.TextColor3 = Color3.fromRGB(255, 255, 255)
-PrivateModePill.TextSize = 9
-PrivateModePill.Visible = false
-PrivateModePill.ZIndex = 31
-PrivateModePill.Parent = InputBarFrame
-local privatePillCorner = Instance.new("UICorner")
-privatePillCorner.CornerRadius = UDim.new(0, 8)
-privatePillCorner.Parent = PrivateModePill
-local function DisablePrivateModeFromPill()
-    -- Same explicit cancel model as ReplyStatusLabel.
-    ClearPersistentPrivatePrefix()
-    if MessageInput then
-        MessageInput:CaptureFocus()
-    end
-end
-
-PrivateModePill.Active = true
-PrivateModePill.Selectable = false
-PrivateModePill.AutoButtonColor = false
-
--- Primary activation, matching the Reply control.
-PrivateModePill.Activated:Connect(DisablePrivateModeFromPill)
-
--- Input fallback for mouse/touch clients.
-PrivateModePill.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        DisablePrivateModeFromPill()
-    end
-end)
-
-local ReplyStatusLabel = Instance.new("TextButton")
-ReplyStatusLabel.Name = "ReplyStatusLabel"
-ReplyStatusLabel.Size = UDim2.new(0, 250, 0, 22)
-ReplyStatusLabel.Position = UDim2.new(0, 165, 0, -25)
-ReplyStatusLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-ReplyStatusLabel.BackgroundTransparency = 0.12
-ReplyStatusLabel.Font = Enum.Font.Gotham
-ReplyStatusLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
-ReplyStatusLabel.TextSize = 9
-ReplyStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-ReplyStatusLabel.Text = ""
-ReplyStatusLabel.Visible = false
-ReplyStatusLabel.ZIndex = 31
-ReplyStatusLabel.Parent = InputBarFrame
-local replyStatusCorner = Instance.new("UICorner")
-replyStatusCorner.CornerRadius = UDim.new(0, 8)
-replyStatusCorner.Parent = ReplyStatusLabel
-RefreshReplyUI = function()
-    if ReplyContextMessage then
-        ReplyStatusLabel.Text = "  ↩ Replying to " .. TruncateText(ReplyContextMessage.DisplayName or ReplyContextMessage.Username or "message", 22) .. "  ×"
-        ReplyStatusLabel.Visible = true
-    else
-        ReplyStatusLabel.Visible = false
-        ReplyStatusLabel.Text = ""
-    end
-end
-ReplyStatusLabel.MouseButton1Click:Connect(function()
-    ReplyContextMessage = nil
-    RefreshReplyUI()
-    MessageInput:CaptureFocus()
 end)
 
 local SendButton = Instance.new("TextButton")
@@ -2200,14 +1846,12 @@ SendCorner.Parent = SendButton
 
 local AutoCompleteFrame = Instance.new("ScrollingFrame")
 AutoCompleteFrame.Name = "AutoCompleteFrame"
-AutoCompleteFrame.Size = UDim2.new(0, 235, 0, 132)
-AutoCompleteFrame.Position = UDim2.new(0, 8, 1, -182)
+AutoCompleteFrame.Size = UDim2.new(0, 200, 0, 120)
+AutoCompleteFrame.Position = UDim2.new(0, 8, 1, -170)
 AutoCompleteFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 AutoCompleteFrame.BackgroundTransparency = 0.2
 AutoCompleteFrame.BorderSizePixel = 0
-AutoCompleteFrame.ScrollBarThickness = 4
-AutoCompleteFrame.Active = true
-AutoCompleteFrame.Selectable = true
+AutoCompleteFrame.ScrollBarThickness = 3
 AutoCompleteFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
 AutoCompleteFrame.Visible = false
 AutoCompleteFrame.ZIndex = 30
@@ -2222,135 +1866,13 @@ AutoCompleteLayout.SortOrder = Enum.SortOrder.LayoutOrder
 AutoCompleteLayout.Padding = UDim.new(0, 2)
 AutoCompleteLayout.Parent = AutoCompleteFrame
 
-local function HideCommandAutocomplete()
-    for _, child in ipairs(AutoCompleteFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    AutoCompleteFrame.Visible = false
-end
-
-local function ShowCommandAutocomplete()
-    if not MessageInput then return end
-
-    HideCommandAutocomplete()
-
-    local typed = MessageInput.Text or ""
-    local lower = string.lower(typed)
-    local command = nil
-    local query = ""
-
-    if lower == "!tag" or lower:sub(1, 5) == "!tag " then
-        command = "!tag "
-        query = typed:sub(6)
-    elseif lower == "!spoof" or lower:sub(1, 7) == "!spoof " then
-        command = "!spoof "
-        query = typed:sub(8)
-    else
-        return
-    end
-
-    local suggestions = {}
-    local seen = {}
-
-    if command == "!tag " then
-        for roleName in pairs(RANK_STYLES) do
-            if not seen[roleName] then
-                table.insert(suggestions, roleName)
-                seen[roleName] = true
-            end
-        end
-        for _, roles in pairs(AvailableUserRoles) do
-            for _, roleName in ipairs(roles) do
-                if not seen[roleName] then
-                    table.insert(suggestions, roleName)
-                    seen[roleName] = true
-                end
-            end
-        end
-    else
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                table.insert(suggestions, player.DisplayName)
-            end
-        end
-    end
-
-    table.sort(suggestions, function(a, b)
-        return string.lower(a) < string.lower(b)
-    end)
-
-    local q = string.lower(query)
-    local shown = 0
-
-    for _, suggestion in ipairs(suggestions) do
-        if q == "" or string.sub(string.lower(suggestion), 1, #q) == q then
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, -8, 0, 24)
-            button.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-            button.BackgroundTransparency = 0.15
-            button.BorderSizePixel = 0
-            button.Font = Enum.Font.GothamMedium
-            button.Text = "  " .. suggestion
-            button.TextColor3 = Color3.fromRGB(235, 235, 240)
-            button.TextSize = 10
-            button.TextXAlignment = Enum.TextXAlignment.Left
-            button.ZIndex = 31
-            button.Parent = AutoCompleteFrame
-
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0, 6)
-            corner.Parent = button
-
-            local stroke = Instance.new("UIStroke")
-            stroke.Thickness = 1
-            stroke.Color = Color3.fromRGB(255, 0, 0)
-            stroke.Transparency = 0.65
-            stroke.Parent = button
-
-            button.MouseEnter:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(55, 25, 35)
-            end)
-            button.MouseLeave:Connect(function()
-                button.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-            end)
-            button.MouseButton1Click:Connect(function()
-                local selectedCommand = command .. suggestion
-                HideCommandAutocomplete()
-
-                -- Setting the textbox after removing the old suggestions avoids
-                -- TextChanged rebuilding the list during the click event.
-                MessageInput.Text = selectedCommand
-                MessageInput.CursorPosition = #selectedCommand + 1
-                MessageInput:CaptureFocus()
-            end)
-
-            button.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Touch then
-                    local selectedCommand = command .. suggestion
-                    HideCommandAutocomplete()
-                    MessageInput.Text = selectedCommand
-                    MessageInput.CursorPosition = #selectedCommand + 1
-                    MessageInput:CaptureFocus()
-                end
-            end)
-
-            shown = shown + 1
-            if shown >= 6 then break end
-        end
-    end
-
-    AutoCompleteFrame.Visible = shown > 0
-end
-
 AutoCompleteLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     AutoCompleteFrame.CanvasSize = UDim2.new(0, 0, 0, AutoCompleteLayout.AbsoluteContentSize.Y + 6)
 end)
 
 local ContextMenu = Instance.new("Frame")
 ContextMenu.Name = "ContextMenu"
-ContextMenu.Size = UDim2.new(0, 160, 0, 125)
+ContextMenu.Size = UDim2.new(0, 160, 0, 105)
 ContextMenu.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 ContextMenu.BackgroundTransparency = 0.2
 ContextMenu.BorderSizePixel = 0
@@ -2365,171 +1887,6 @@ ContextCorner.Parent = ContextMenu
 local ContextList = Instance.new("UIListLayout")
 ContextList.SortOrder = Enum.SortOrder.LayoutOrder
 ContextList.Parent = ContextMenu
-
-local function HideMessageContextMenu()
-    ContextMenu.Visible = false
-    CurrentContextMessage = nil
-end
-
-local function ResolvePrivateRecipient(prefix)
-    prefix = tostring(prefix or "")
-    if prefix == "" then return nil end
-    local needle = string.lower(string.sub(prefix, 1, 8))
-
-    -- Prefer players currently present in this server.
-    for _, player in ipairs(Players:GetPlayers()) do
-        local displayName = player.DisplayName or player.Name or ""
-        if string.lower(string.sub(displayName, 1, 8)) == needle then
-            return player.Name, displayName
-        end
-    end
-
-    -- Fall back to people whose messages are already known to this client.
-    local caches = { GlobalCachedMessages, ServerCachedMessages }
-    for _, cache in ipairs(caches) do
-        for _, msg in pairs(cache) do
-            if type(msg) == "table" then
-                local displayName = msg.DisplayName or msg.Username or ""
-                if string.lower(string.sub(displayName, 1, 8)) == needle then
-                    return msg.Username, displayName
-                end
-            end
-        end
-    end
-
-    return nil
-end
-
-local function IsPrivateModeActive()
-    return PrivateModeTargetUsername ~= nil and PrivateModeTargetDisplayName ~= nil
-end
-
-local function RefreshPrivateModeUI()
-    if not PrivateModePill then return end
-    local active = IsPrivateModeActive()
-    PrivateModePill.Visible = active
-    PrivateModePill.Text = active
-        and ("PVT • " .. TruncateText(PrivateModeTargetDisplayName or "Private", 16) .. "  ×")
-        or ""
-    PrivateModePill.ZIndex = 100
-end
-
--- New PVT mechanism:
--- The /pvt command is NOT stored inside the TextBox anymore.
--- PVT state lives entirely in these two variables. The pill is the explicit
--- mode indicator/control and the textbox remains a normal editable textbox.
-local function SetPersistentPrivatePrefix(displayName, username)
-    local safeName = tostring(displayName or username or "Unknown")
-    PrivateModeTargetUsername = username
-    PrivateModeTargetDisplayName = safeName
-    PersistentPvtPrefix = "/pvt @" .. string.sub(safeName, 1, 8) .. " "
-    if MessageInput then
-        MessageInput.Text = ""
-        MessageInput.CursorPosition = 1
-        MessageInput:CaptureFocus()
-    end
-    RefreshPrivateModeUI()
-end
-
-ClearPersistentPrivatePrefix = function()
-    -- Explicit PVT cancel, independent of textbox focus/content.
-    PersistentPvtPrefix = ""
-    PrivateModeTargetUsername = nil
-    PrivateModeTargetDisplayName = nil
-    if MessageInput then
-        MessageInput.Text = ""
-        MessageInput.CursorPosition = 1
-    end
-    RefreshPrivateModeUI()
-end
-
-local function ShowMessageContextMenu(msgData, position)
-    CurrentContextMessage = msgData
-    ContextMenu.Visible = true
-    ContextMenu.Position = UDim2.fromOffset(position.X, position.Y)
-
-    -- Keep the menu on-screen.
-    task.defer(function()
-        if not ContextMenu.Visible then return end
-        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
-        local size = ContextMenu.AbsoluteSize
-        local x = math.clamp(position.X, 4, math.max(4, viewport.X - size.X - 4))
-        local y = math.clamp(position.Y, 4, math.max(4, viewport.Y - size.Y - 4))
-        ContextMenu.Position = UDim2.fromOffset(x, y)
-    end)
-end
-
-local function AddContextMenuButton(text, order, callback)
-    local button = Instance.new("TextButton")
-    button.Name = text:gsub("%s+", "") .. "Button"
-    button.Size = UDim2.new(1, 0, 0, 40)
-    button.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-    button.BackgroundTransparency = 0.15
-    button.BorderSizePixel = 0
-    button.Font = Enum.Font.GothamMedium
-    button.Text = text
-    button.TextColor3 = Color3.fromRGB(240, 240, 245)
-    button.TextSize = 12
-    button.LayoutOrder = order
-    button.ZIndex = 21
-    button.Parent = ContextMenu
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 7)
-    corner.Parent = button
-
-    button.MouseButton1Click:Connect(function()
-        callback()
-        HideMessageContextMenu()
-    end)
-    return button
-end
-
-local function BuildMessageContextMenu()
-    for _, child in ipairs(ContextMenu:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-
-    AddContextMenuButton("Copy Message", 1, function()
-        if CurrentContextMessage and setclipboard then
-            setclipboard(tostring(CurrentContextMessage.Text or ""))
-        end
-    end)
-
-    AddContextMenuButton("Reply", 2, function()
-        if not CurrentContextMessage then return end
-        ReplyContextMessage = CurrentContextMessage
-        RefreshReplyUI()
-        MessageInput:CaptureFocus()
-    end)
-
-    AddContextMenuButton("Pvt Message", 3, function()
-        if not CurrentContextMessage then return end
-        local msg = CurrentContextMessage
-        local displayName = msg.DisplayName or msg.Username or "Unknown"
-        SetPersistentPrivatePrefix(displayName, msg.Username)
-    end)
-end
-
-BuildMessageContextMenu()
-
-ContextMenu.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        -- Let child option buttons handle their own click; this only prevents accidental hiding.
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not ContextMenu.Visible or gameProcessed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        local p = input.Position
-        local pos = ContextMenu.AbsolutePosition
-        local size = ContextMenu.AbsoluteSize
-        if p.X < pos.X or p.X > pos.X + size.X or p.Y < pos.Y or p.Y > pos.Y + size.Y then
-            HideMessageContextMenu()
-        end
-    end
-end)
 
 -- Draggable Logic
 local function MakeDraggable(frame, dragHandle)
@@ -2575,6 +1932,9 @@ local function SwitchTab(newTab)
     AboutFrame.Visible = (newTab == "ABOUT")
     ProfileFrame.Visible = (newTab == "PROFILE")
     StickerPanel.Visible = false
+    if ServerInviteButton then
+        ServerInviteButton.Visible = (newTab == "GLOBAL")
+    end
 
     GlobalTabBtn.BackgroundColor3 = (newTab == "GLOBAL") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
     ServerTabBtn.BackgroundColor3 = (newTab == "SERVER") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
@@ -2603,7 +1963,7 @@ local function CreateMessageCard(msgData, isGlobal)
     frame.Name = "MessageCard"
     frame.Size = UDim2.new(1, 0, 0, 0)
     frame.AutomaticSize = Enum.AutomaticSize.Y
-    frame.BackgroundColor3 = msgData.IsPrivate and Color3.fromRGB(120, 20, 28) or Color3.fromRGB(15, 15, 22)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
     frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 0
 
@@ -2645,7 +2005,9 @@ local function CreateMessageCard(msgData, isGlobal)
     tagCorner.CornerRadius = UDim.new(0, 4)
     tagCorner.Parent = tagLabel
 
-    AnimateRoleFont(tagLabel, roleName, style)
+    local tagGradient = Instance.new("UIGradient")
+    tagGradient.Color = ColorSequence.new(style.Start, style.End)
+    tagGradient.Parent = tagLabel
 
     local isClient = (msgData.Username == LocalPlayer.Name)
     local formattedName = GetFormattedDisplayName(msgData.DisplayName or msgData.Username, isClient)
@@ -2670,39 +2032,105 @@ local function CreateMessageCard(msgData, isGlobal)
         end
     end)
 
-    if msgData.ReplyToText and msgData.ReplyToText ~= "" then
-        local replyBox = Instance.new("Frame")
-        replyBox.Name = "ReplyPreview"
-        replyBox.Size = UDim2.new(1, -48, 0, 30)
-        replyBox.Position = UDim2.new(0, 38, 0, 24)
-        replyBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        replyBox.BackgroundTransparency = 0.88
-        replyBox.BorderSizePixel = 0
-        replyBox.Parent = frame
-        local replyCorner = Instance.new("UICorner")
-        replyCorner.CornerRadius = UDim.new(0, 6)
-        replyCorner.Parent = replyBox
-        local replyLabel = Instance.new("TextLabel")
-        replyLabel.Size = UDim2.new(1, -10, 1, -4)
-        replyLabel.Position = UDim2.new(0, 5, 0, 2)
-        replyLabel.BackgroundTransparency = 1
-        replyLabel.Font = Enum.Font.Gotham
-        replyLabel.Text = "↩ " .. tostring(msgData.ReplyToDisplayName or "Reply") .. ": " .. TruncateText(tostring(msgData.ReplyToText), 80)
-        replyLabel.TextColor3 = Color3.fromRGB(210, 210, 220)
-        replyLabel.TextSize = 9
-        replyLabel.TextXAlignment = Enum.TextXAlignment.Left
-        replyLabel.TextYAlignment = Enum.TextYAlignment.Center
-        replyLabel.TextWrapped = true
-        replyLabel.Parent = replyBox
-    end
-
     local isSticker = string.sub(msgData.Text, 1, 11) == "rbxthumb://" or string.sub(msgData.Text, 1, 13) == "rbxassetid://"
 
-    if isSticker then
+    if msgData.IsServerInvite and msgData.PlaceId and msgData.JobId then
+        frame.Size = UDim2.new(1, 0, 0, 88)
+        frame.AutomaticSize = Enum.AutomaticSize.None
+
+        local inviteTitle = Instance.new("TextLabel")
+        inviteTitle.Name = "ServerInviteTitle"
+        inviteTitle.Size = UDim2.new(1, -155, 0, 22)
+        inviteTitle.Position = UDim2.new(0, 38, 0, 27)
+        inviteTitle.BackgroundTransparency = 1
+        inviteTitle.Font = Enum.Font.GothamBold
+        inviteTitle.Text = tostring(msgData.Text or "Join Current Server")
+        inviteTitle.TextColor3 = Color3.fromRGB(235, 235, 245)
+        inviteTitle.TextSize = 12
+        inviteTitle.TextXAlignment = Enum.TextXAlignment.Left
+        inviteTitle.TextYAlignment = Enum.TextYAlignment.Center
+        inviteTitle.TextWrapped = true
+        inviteTitle.Parent = frame
+
+        local inviteLabel = Instance.new("TextLabel")
+        inviteLabel.Name = "ServerInviteLabel"
+        inviteLabel.Size = UDim2.new(1, -155, 0, 18)
+        inviteLabel.Position = UDim2.new(0, 38, 0, 50)
+        inviteLabel.BackgroundTransparency = 1
+        inviteLabel.Font = Enum.Font.Gotham
+        inviteLabel.Text = "Server Invite"
+        inviteLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+        inviteLabel.TextSize = 10
+        inviteLabel.TextXAlignment = Enum.TextXAlignment.Left
+        inviteLabel.Parent = frame
+
+        local joinButton = Instance.new("TextButton")
+        joinButton.Name = "JoinServerButton"
+        joinButton.Size = UDim2.new(0, 120, 0, 30)
+        joinButton.Position = UDim2.new(1, -130, 0.5, -15)
+        joinButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+        joinButton.BackgroundTransparency = 0.1
+        joinButton.BorderSizePixel = 0
+        joinButton.Font = Enum.Font.GothamBold
+        joinButton.Text = "JOIN SERVER"
+        joinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        joinButton.TextSize = 10
+        joinButton.ZIndex = 20
+        joinButton.Parent = frame
+
+        local joinCorner = Instance.new("UICorner")
+        joinCorner.CornerRadius = UDim.new(0, 7)
+        joinCorner.Parent = joinButton
+
+        local joinStroke = Instance.new("UIStroke")
+        joinStroke.Thickness = 1
+        joinStroke.Color = Color3.fromRGB(255, 90, 90)
+        joinStroke.Transparency = 0.35
+        joinStroke.Parent = joinButton
+
+        joinButton.MouseButton1Click:Connect(function()
+            local placeId = tonumber(msgData.PlaceId)
+            local jobId = tostring(msgData.JobId or "")
+
+            if not placeId or jobId == "" then
+                joinButton.Text = "INVITE EXPIRED"
+                task.delay(1.5, function()
+                    if joinButton and joinButton.Parent then
+                        joinButton.Text = "JOIN SERVER"
+                    end
+                end)
+                return
+            end
+
+            if game.JobId ~= "" and jobId == game.JobId then
+                joinButton.Text = "ALREADY HERE"
+                task.delay(1.5, function()
+                    if joinButton and joinButton.Parent then
+                        joinButton.Text = "JOIN SERVER"
+                    end
+                end)
+                return
+            end
+
+            joinButton.Text = "JOINING..."
+            local ok = pcall(function()
+                TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+            end)
+
+            if not ok then
+                joinButton.Text = "JOIN FAILED"
+                task.delay(1.5, function()
+                    if joinButton and joinButton.Parent then
+                        joinButton.Text = "JOIN SERVER"
+                    end
+                end)
+            end
+        end)
+    elseif isSticker then
         local stickerImg = Instance.new("ImageLabel")
         stickerImg.Name = "StickerMsg"
         stickerImg.Size = UDim2.new(0, 80, 0, 80)
-        stickerImg.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 60 or 26)
+        stickerImg.Position = UDim2.new(0, 38, 0, 26)
         stickerImg.BackgroundTransparency = 1
         stickerImg.Image = msgData.Text
         stickerImg.ScaleType = Enum.ScaleType.Fit
@@ -2715,7 +2143,7 @@ local function CreateMessageCard(msgData, isGlobal)
         local contentLabel = Instance.new("TextLabel")
         contentLabel.Name = "ContentLabel"
         contentLabel.Size = UDim2.new(1, -48, 0, 0)
-        contentLabel.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
+        contentLabel.Position = UDim2.new(0, 38, 0, 24)
         contentLabel.AutomaticSize = Enum.AutomaticSize.Y
         contentLabel.BackgroundTransparency = 1
         contentLabel.Font = Enum.Font.Gotham
@@ -2732,148 +2160,18 @@ local function CreateMessageCard(msgData, isGlobal)
         pad.Parent = frame
     end
 
-
-    if msgData.IsServerInvite and msgData.PlaceId and msgData.JobId then
-        local joinButton = Instance.new("TextButton")
-        joinButton.Name = "JoinServerButton"
-        joinButton.Size = UDim2.new(0, 120, 0, 24)
-        joinButton.Position = UDim2.new(0, 38, 1, -30)
-        joinButton.BackgroundColor3 = Color3.fromRGB(30, 150, 70)
-        joinButton.Text = "Join Server"
-        joinButton.TextColor3 = Color3.fromRGB(255,255,255)
-        joinButton.Font = Enum.Font.GothamBold
-        joinButton.TextSize = 10
-        joinButton.ZIndex = 20
-        joinButton.Parent = frame
-
-        local joinCorner = Instance.new("UICorner")
-        joinCorner.CornerRadius = UDim.new(0,6)
-        joinCorner.Parent = joinButton
-
-        joinButton.MouseButton1Click:Connect(function()
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(
-                    tonumber(msgData.PlaceId),
-                    tostring(msgData.JobId),
-                    LocalPlayer
-                )
-            end)
-        end)
-    end
-
-    -- Transparent interaction layer: long-pressing any part of the message opens the options menu.
-    local interactionButton = Instance.new("TextButton")
-    interactionButton.Name = "MessageInteraction"
-    interactionButton.Size = UDim2.new(1, 0, 1, 0)
-    interactionButton.Position = UDim2.new(0, 0, 0, 0)
-    interactionButton.BackgroundTransparency = 1
-    interactionButton.BorderSizePixel = 0
-    interactionButton.Text = ""
-    interactionButton.AutoButtonColor = false
-    interactionButton.ZIndex = 10
-    interactionButton.Parent = frame
-
-    local pressToken = 0
-    interactionButton.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        pressToken = pressToken + 1
-        local token = pressToken
-        local pressPosition = input.Position
-
-        task.delay(0.65, function()
-            if token ~= pressToken or not interactionButton.Parent then return end
-            ShowMessageContextMenu(msgData, pressPosition)
-        end)
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                pressToken = pressToken + 1
-            end
-        end)
-    end)
-
     frame.Parent = MessageContainer
-    frame:SetAttribute("MessageTimestamp", msgData.Timestamp or 0)
-    frame:SetAttribute("MessageUsername", msgData.Username or "")
-
-    if msgData.ReplyToTimestamp then
-        task.delay(0.15, function()
-            for _, child in ipairs(MessageContainer:GetChildren()) do
-                if child:IsA("Frame") and child:GetAttribute("MessageTimestamp") == msgData.ReplyToTimestamp and child:GetAttribute("MessageUsername") == msgData.ReplyToUsername then
-                    local stroke = child:FindFirstChild("ReplyHighlight")
-                    if not stroke then
-                        stroke = Instance.new("UIStroke")
-                        stroke.Name = "ReplyHighlight"
-                        stroke.Thickness = 2
-                        stroke.Color = Color3.fromRGB(255, 70, 70)
-                        stroke.Transparency = 0.1
-                        stroke.Parent = child
-                    end
-                    task.delay(2.5, function()
-                        if stroke and stroke.Parent then
-                            TweenService:Create(stroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
-                        end
-                    end)
-                    break
-                end
-            end
-        end)
-    end
     return frame
 end
 
 -- ============================================================================
--- FIREBASE POLLING & SENDING LOGIC
--- ============================================================================
-local function ShowLocalSystemMessage(text, isError)
-    local msg = {
-        Username = LocalPlayer.Name,
-        DisplayName = "AI MoD",
-        Text = tostring(text),
-        Timestamp = os.time() + (math.random() / 1000),
-        Role = "Recruit",
-        PfpId = CurrentPfpId,
-        IsPrivate = false,
-        SystemMessage = true,
-        LocalOnly = true,
-    }
-
-    local card = CreateMessageCard(msg, ActiveTab == "GLOBAL")
-    card:SetAttribute("LocalOnly", true)
-    card.Visible = true
-
-    local content = card:FindFirstChild("ContentLabel")
-    if content and isError then
-        content.TextColor3 = Color3.fromRGB(255, 105, 105)
-    end
-end
-
-local function ShowAntiSpamMessage()
-    ShowLocalSystemMessage("[AI MoD] : Deep breath in, deep breath out. Now, please stop spamming 😣", true)
-end
-
-local function TestNotification()
-    local testId = "LOCAL_TEST_NOTIFICATION_" .. tostring(os.clock()) .. "_" .. tostring(math.random(1000, 9999))
-    DisplayNewMessageNotif({
-        Username = "__KronosNotificationTest",
-        DisplayName = "Kronos Test",
-        Text = "Notification test — if you see this, notifications are working.",
-        Timestamp = os.time(),
-        Role = "Recruit",
-        PfpId = CurrentPfpId,
-        IsPrivate = false,
-    }, testId)
-end
-
-
--- ============================================================================
--- SERVER INVITE SYSTEM (Firebase compatible)
+-- SERVER INVITE SYSTEM
 -- ============================================================================
 local function CreateServerInvitePayload()
     return {
         Username = LocalPlayer.Name,
         DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = "Server Invite",
+        Text = "Join " .. GetFormattedDisplayName(LocalPlayer.DisplayName, true) .. "'s Current Server",
         Timestamp = os.time(),
         Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
         PfpId = CurrentPfpId,
@@ -2885,266 +2183,98 @@ local function CreateServerInvitePayload()
 end
 
 local function SendServerInvite()
-    local payload = CreateServerInvitePayload()
-    local targetUrl = (ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
-
-    if IsPrivateModeActive() and PrivateModeTargetUsername then
-        payload.IsPrivate = true
-        payload.TargetUsername = PrivateModeTargetUsername
-        payload.TargetDisplayName = PrivateModeTargetDisplayName
-        targetUrl = GLOBAL_MESSAGES_ENDPOINT
+    if ActiveTab ~= "GLOBAL" then
+        return
     end
+
+    if not game.PlaceId or game.PlaceId <= 0 or SERVER_JOB_ID == "" then
+        return
+    end
+
+    local payload = CreateServerInvitePayload()
+    local localId = "local_invite_" .. tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999))
+
+    -- Render immediately for the sender.
+    GlobalCachedMessages[localId] = payload
+    local card = CreateMessageCard(payload, true)
+    card.Visible = true
+    table.insert(GlobalUIElements, card)
 
     task.spawn(function()
-        HttpRequest(targetUrl, "POST", payload)
+        HttpRequest(GLOBAL_MESSAGES_ENDPOINT, "POST", payload)
     end)
-
-    local cache = (ActiveTab == "GLOBAL") and GlobalCachedMessages or ServerCachedMessages
-    local ui = (ActiveTab == "GLOBAL") and GlobalUIElements or ServerUIElements
-    local id = "local_invite_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000,9999))
-    cache[id] = payload
-    local card = CreateMessageCard(payload, ActiveTab == "GLOBAL")
-    card.Visible = true
-    table.insert(ui, card)
 end
 
+ServerInviteButton.MouseButton1Click:Connect(SendServerInvite)
+ServerInviteButton.Visible = (ActiveTab == "GLOBAL")
+
+-- ============================================================================
+-- FIREBASE POLLING & SENDING LOGIC
+-- ============================================================================
 SendChatMessage = function()
-    local typedText = MessageInput.Text or ""
-    if typedText == "" or typedText:match("^%s*$") then return end
+    local text = MessageInput.Text
+    if text == "" or text:match("^%s*$") then return end
 
-    local isPrivate = IsPrivateModeActive()
-    local privateTargetUsername = PrivateModeTargetUsername
-    local privateTargetDisplayName = PrivateModeTargetDisplayName
-    local privateBody = typedText
-
-    -- PVT is determined only by the stored recipient state.
-    -- There is no special prefix in the TextBox to delete or accidentally edit.
-    if isPrivate then
-        if not privateTargetUsername then return end
-        privateBody = typedText
-        if privateBody:match("^%s*$") then return end
-    end
-
-    if not isPrivate and typedText == "!testnotif" then
-        TestNotification()
-        ShowLocalSystemMessage("[AI MoD] : Notification test triggered successfully ✓")
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!notify" then
-        TestNotification()
-        ShowLocalSystemMessage("[AI MoD] : Notification test triggered successfully ✓")
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!joined" then
-        ShowLocalJoinMessage()
-        ShowLocalSystemMessage("[AI MoD] : Join-message test triggered successfully ✓")
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and string.sub(typedText, 1, 5) == "!tag " then
-        local newRole = string.sub(typedText, 6)
+    -- Command Processing
+    if string.sub(text, 1, 5) == "!tag " then
+        local newRole = string.sub(text, 6)
         local allowedRoles = AvailableUserRoles[LocalPlayer.Name] or {}
         local isAdmin = HasAdminPermission(LocalPlayer.Name)
-        if string.lower(newRole) == "architect" or string.lower(newRole) == "overseer" or string.lower(newRole) == "com-god" then
-            ShowLocalSystemMessage("[AI MoD] : Command failed. Architect, Overseer and Com-God are restricted.", true)
-        elseif table.find(allowedRoles, newRole) or isAdmin or RANK_STYLES[newRole] then
+
+        if table.find(allowedRoles, newRole) or isAdmin or RANK_STYLES[newRole] then
             AssignedPlayerRoles[LocalPlayer.Name] = newRole
             DisabledTags[LocalPlayer.Name] = nil
-            ShowLocalSystemMessage("[AI MoD] : Tag changed successfully to " .. newRole .. " ✓")
-        else
-            ShowLocalSystemMessage("[AI MoD] : Command failed. You do not have permission for '" .. newRole .. "'.", true)
         end
         MessageInput.Text = ""
         return
-    elseif not isPrivate and typedText == "!tag" then
+    elseif text == "!tag" then
         DisabledTags[LocalPlayer.Name] = not DisabledTags[LocalPlayer.Name]
-        ShowLocalSystemMessage("[AI MoD] : Tag display " .. (DisabledTags[LocalPlayer.Name] and "disabled" or "enabled") .. " ✓")
         MessageInput.Text = ""
         return
-    elseif not isPrivate and string.sub(typedText, 1, 6) == "!role " then
-        local args = string.split(string.sub(typedText, 7), " ")
-        if #args >= 2 and HasAdminPermission(LocalPlayer.Name) then
-            local targetUser = args[1]
-            local targetRole = table.concat(args, " ", 2)
-            if Players:FindFirstChild(targetUser) and RANK_STYLES[targetRole] then
-                AssignedPlayerRoles[targetUser] = targetRole
-                ShowLocalSystemMessage("[AI MoD] : Role assigned successfully: " .. targetUser .. " → " .. targetRole .. " ✓")
-            else
-                ShowLocalSystemMessage("[AI MoD] : Command failed. Invalid player or role.", true)
-            end
-        else
-            ShowLocalSystemMessage("[AI MoD] : Command failed. You do not have permission to use !role.", true)
+    elseif string.sub(text, 1, 7) == "!spoof " then
+        if CanUseSpoof(LocalPlayer.Name) then
+            SpoofedDisplayName = string.sub(text, 8)
         end
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!role" then
-        ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !role [PlayerName] [RoleName].", true)
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and string.sub(typedText, 1, 7) == "!spoof " then
-        local requested = string.sub(typedText, 8)
-        local lowered = string.lower(requested)
-        if lowered == "architect" or lowered == "overseer" or lowered == "com-god" then
-            ShowLocalSystemMessage("[AI MoD] : Command failed. Architect and Overseer cannot be spoofed.", true)
-        elseif CanUseSpoof(LocalPlayer.Name) then
-            SpoofedDisplayName = requested
-            ShowLocalSystemMessage("[AI MoD] : Display name changed successfully ✓")
-        else
-            ShowLocalSystemMessage("[AI MoD] : Command failed. You do not have permission to use !spoof.", true)
-        end
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!spoof" then
-        ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !spoof [NewName].", true)
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and string.sub(typedText, 1, 1) == "!" then
-        ShowLocalSystemMessage("[AI MoD] : Unknown command. Command failed.", true)
         MessageInput.Text = ""
         return
     end
 
-    -- Anti-spam applies to the actual message body, not the hidden PVT state.
-    local spamText = privateBody
     local now = tick()
-    if spamText == LastSentMessageText and (now - LastMessageSendTime) <= 30 then
+    if text == LastSentMessageText and (now - LastMessageSendTime) < 3 then
         ConsecutiveSpamCount = ConsecutiveSpamCount + 1
+        if ConsecutiveSpamCount >= 3 then
+            MessageInput.Text = ""
+            return
+        end
     else
-        ConsecutiveSpamCount = 1
+        ConsecutiveSpamCount = 0
     end
 
-    if ConsecutiveSpamCount >= 3 then
-        ShowAntiSpamMessage()
-        MessageInput.Text = ""
-        return
-    end
-
-    LastSentMessageText = spamText
+    LastSentMessageText = text
     LastMessageSendTime = now
 
-    local reply = ReplyContextMessage
-    local clientMessageId = LocalPlayer.UserId .. "_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999))
-
     local payload = {
-        ClientMessageId = clientMessageId,
         Username = LocalPlayer.Name,
         DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = privateBody,
+        Text = text,
         Timestamp = os.time(),
         Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
         PfpId = CurrentPfpId,
-        IsPrivate = isPrivate,
-        TargetUsername = privateTargetUsername,
-        TargetDisplayName = privateTargetDisplayName,
-        ReplyToUsername = reply and reply.Username or nil,
-        ReplyToDisplayName = reply and reply.DisplayName or nil,
-        ReplyToText = reply and reply.Text or nil,
-        ReplyToTimestamp = reply and reply.Timestamp or nil
+        IsPrivate = false
     }
 
-    -- Render immediately. The UI no longer waits for Firebase at all.
-    local localCache = (ActiveTab == "GLOBAL") and GlobalCachedMessages or ServerCachedMessages
-    local localUI = (ActiveTab == "GLOBAL") and GlobalUIElements or ServerUIElements
-    local localKey = "local_" .. clientMessageId
-
-    localCache[localKey] = payload
-    local immediateCard = CreateMessageCard(payload, ActiveTab == "GLOBAL")
-    immediateCard.Visible = true
-    table.insert(localUI, immediateCard)
+    local targetUrl = (ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
 
     MessageInput.Text = ""
-    ReplyContextMessage = nil
-    RefreshReplyUI()
-
-    -- Firebase persistence is asynchronous and starts immediately after the
-    -- local render. A deterministic client id lets polling recognize the
-    -- same message and prevents a second copy from appearing.
-    local targetUrl = (ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
     task.spawn(function()
-        local ok = pcall(function()
-            HttpRequest(targetUrl, "POST", payload)
-        end)
-        if not ok then
-            -- Keep the already-rendered local message; Firebase failure does
-            -- not make the chat feel delayed or erase the user's message.
-        end
+        HttpRequest(targetUrl, "POST", payload)
     end)
 end
-
-MessageInput:GetPropertyChangedSignal("Text"):Connect(function()
-    ShowCommandAutocomplete()
-end)
-
-MessageInput.FocusLost:Connect(function()
-    -- Do not immediately destroy suggestions: clicking/tapping a suggestion
-    -- necessarily causes the TextBox to lose focus first.
-    task.defer(function()
-        if not MessageInput then return end
-        local current = string.lower(MessageInput.Text or "")
-        local isCommand = current == "!tag"
-            or current:sub(1, 5) == "!tag "
-            or current == "!spoof"
-            or current:sub(1, 7) == "!spoof "
-
-        if not isCommand then
-            HideCommandAutocomplete()
-        end
-    end)
-end)
-
-
--- Server invite/share button
-local ServerInviteButton = Instance.new("TextButton")
-ServerInviteButton.Name = "ServerInviteButton"
-ServerInviteButton.Size = UDim2.new(0, 34, 0, 30)
-ServerInviteButton.Position = UDim2.new(1, -76, 0.5, -15)
-ServerInviteButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-ServerInviteButton.Text = "📍"
-ServerInviteButton.TextColor3 = Color3.fromRGB(255,255,255)
-ServerInviteButton.Font = Enum.Font.GothamBold
-ServerInviteButton.TextSize = 16
-ServerInviteButton.Parent = InputBarFrame
-local ServerInviteCorner = Instance.new("UICorner")
-ServerInviteCorner.CornerRadius = UDim.new(0,8)
-ServerInviteCorner.Parent = ServerInviteButton
-ServerInviteButton.MouseButton1Click:Connect(SendServerInvite)
 
 SendButton.MouseButton1Click:Connect(SendChatMessage)
 MessageInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then SendChatMessage() end
 end)
-
-local function BuildJoinMessagePayload()
-    return {
-        Username = LocalPlayer.Name,
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = "has Joined the Server Chat",
-        Timestamp = os.time(),
-        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
-        PfpId = CurrentPfpId,
-        IsPrivate = false,
-        IsJoinMessage = true,
-        JoinEventId = JoinEventId,
-    }
-end
-
-local function ShowLocalJoinMessage()
-    local payload = BuildJoinMessagePayload()
-    local localId = "local_join_" .. JoinEventId
-
-    -- Immediate local render: the joining client does not wait for Firebase.
-    ServerCachedMessages[localId] = payload
-    local card = CreateMessageCard(payload, false)
-    card.Visible = (ActiveTab == "SERVER")
-    table.insert(ServerUIElements, card)
-    DisplayNewMessageNotif(payload, localId)
-end
-
-local function PostServerJoinMessage()
-    local payload = BuildJoinMessagePayload()
-    task.spawn(function()
-        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
-    end)
-end
 
 local function PollMessages()
     while true do
@@ -3154,11 +2284,8 @@ local function PollMessages()
         local globalData = HttpRequest(GLOBAL_MESSAGES_ENDPOINT, "GET")
         if globalData and type(globalData) == "table" then
             for id, msg in pairs(globalData) do
-                if type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name) then
-                    local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
-                    if clientKey and GlobalCachedMessages[clientKey] then
-                        GlobalCachedMessages[id] = msg
-                    elseif not GlobalCachedMessages[id] then
+                if type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime then
+                    if not GlobalCachedMessages[id] then
                         GlobalCachedMessages[id] = msg
                         local card = CreateMessageCard(msg, true)
                         card.Visible = (ActiveTab == "GLOBAL")
@@ -3172,13 +2299,8 @@ local function PollMessages()
         local serverData = HttpRequest(SERVER_MESSAGES_ENDPOINT, "GET")
         if serverData and type(serverData) == "table" then
             for id, msg in pairs(serverData) do
-                if type(msg) == "table" and msg.JoinEventId == JoinEventId then
-                    -- Already rendered locally.
-                elseif type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name) then
-                    local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
-                    if clientKey and ServerCachedMessages[clientKey] then
-                        ServerCachedMessages[id] = msg
-                    elseif not ServerCachedMessages[id] then
+                if type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime then
+                    if not ServerCachedMessages[id] then
                         ServerCachedMessages[id] = msg
                         local card = CreateMessageCard(msg, false)
                         card.Visible = (ActiveTab == "SERVER")
@@ -3193,18 +2315,4 @@ local function PollMessages()
     end
 end
 
-task.spawn(function()
-    task.wait(0.5)
-    ShowLocalJoinMessage()
-    task.wait(0.25)
-    PostServerJoinMessage()
-end)
-
 task.spawn(PollMessages)
-
-
--- ARCHITECT / OVERSEER SPOOF PROTECTION
-local function KronosProtectedSpoofRole(name)
-    name = tostring(name or ""):lower()
-    return name == "architect" or name == "overseer"
-end
