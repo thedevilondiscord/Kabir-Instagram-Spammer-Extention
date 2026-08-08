@@ -62,7 +62,7 @@ local BoyPfpList = {
     "15489228483", "139913462267814", "127087398265711", "15741130603", "15914059452", "135351963625525",
     "116451771061047", "128665410481682", "80274332831847", "82099431184126", "133311251800519", "13120458633",
     "115774065375902", "70802874073501", "13589962584", "14640595544", "13399057339", "10246136967",
-    "133023108030460", "119497955225507", "16167788172", "12972724276", "18955458678"
+    "133023108030460", "119497955225507", "16167788172", "12972724276", "18955458678", "105883736105171", "77630895008923", "118862079408453", "106469663951907", "106301311535154", "80256028266444", "80138975757326", "88153948399084", "97074936820513", "122133569226021", "125791648012678", "81831086505070", "89843619861520"
 }
 
 local GirlPfpList = {
@@ -742,52 +742,6 @@ for _, v in ipairs(baseStickers) do
     end
 end
 baseStickers = uniqueStickers
-
-
--- ============================================================================
--- CUSTOM USER STICKER IMPORT SYSTEM (PERSISTENT)
--- ============================================================================
-local CUSTOM_STICKERS_KEY = "Kronos_Custom_Stickers"
-local customStickers = {}
-
-local function SaveCustomStickers()
-    if writefile and HttpService then
-        pcall(function()
-            writefile(CUSTOM_STICKERS_KEY .. ".json", HttpService:JSONEncode(customStickers))
-        end)
-    end
-end
-
-local function LoadCustomStickers()
-    if readfile and isfile and HttpService and isfile(CUSTOM_STICKERS_KEY .. ".json") then
-        pcall(function()
-            local data = HttpService:JSONDecode(readfile(CUSTOM_STICKERS_KEY .. ".json"))
-            if type(data) == "table" then
-                customStickers = data
-            end
-        end)
-    end
-end
-
-local function AddCustomSticker(assetId)
-    local url = "rbxthumb://type=Asset&id=" .. tostring(assetId) .. "&w=420&h=420"
-
-    for _, sticker in ipairs(baseStickers) do
-        if sticker == url then
-            return false
-        end
-    end
-
-    table.insert(customStickers, url)
-    table.insert(baseStickers, url)
-    SaveCustomStickers()
-    return true, url
-end
-
-LoadCustomStickers()
-for _, sticker in ipairs(customStickers) do
-    table.insert(baseStickers, sticker)
-end
 
 -- ============================================================================
 -- HARDCODED RANKS & DEFAULT STYLES
@@ -1673,7 +1627,7 @@ StickerGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     StickerScroller.CanvasSize = UDim2.new(0, 0, 0, StickerGrid.AbsoluteContentSize.Y + 12)
 end)
 
-local function CreateStickerCard(stickerUrl)
+for _, stickerUrl in ipairs(baseStickers) do
     local stickerCard = Instance.new("ImageButton")
     stickerCard.Name = "StickerCard"
     stickerCard.BackgroundColor3 = Color3.fromRGB(25, 25, 38)
@@ -1702,10 +1656,6 @@ local function CreateStickerCard(stickerUrl)
     end)
 end
 
-for _, stickerUrl in ipairs(baseStickers) do
-    CreateStickerCard(stickerUrl)
-end
-
 -- ============================================================================
 -- PROFILE TAB IMPLEMENTATION
 -- ============================================================================
@@ -1716,68 +1666,6 @@ ProfileFrame.Position = UDim2.new(0, 8, 0, 40)
 ProfileFrame.BackgroundTransparency = 1
 ProfileFrame.Visible = false
 ProfileFrame.Parent = MainFrame
-
-
--- Import Sticker Button
-local ImportStickerButton = Instance.new("TextButton")
-ImportStickerButton.Name = "ImportStickerButton"
-ImportStickerButton.Size = UDim2.new(0,150,0,35)
-ImportStickerButton.Position = UDim2.new(0,10,0,65)
-ImportStickerButton.BackgroundColor3 = Color3.fromRGB(35,35,45)
-ImportStickerButton.Text = "+ Import Sticker"
-ImportStickerButton.TextColor3 = Color3.fromRGB(255,255,255)
-ImportStickerButton.Font = Enum.Font.GothamBold
-ImportStickerButton.TextSize = 14
-ImportStickerButton.Parent = ProfileFrame
-
-local ImportCorner = Instance.new("UICorner")
-ImportCorner.CornerRadius = UDim.new(0,8)
-ImportCorner.Parent = ImportStickerButton
-
-local StickerImportPopup = Instance.new("Frame")
-StickerImportPopup.Size = UDim2.new(0,300,0,150)
-StickerImportPopup.Position = UDim2.new(0.5,-150,0.5,-75)
-StickerImportPopup.BackgroundColor3 = Color3.fromRGB(15,15,25)
-StickerImportPopup.Visible = false
-StickerImportPopup.ZIndex = 100
-StickerImportPopup.Parent = MainFrame
-
-local StickerInput = Instance.new("TextBox")
-StickerInput.Size = UDim2.new(1,-30,0,35)
-StickerInput.Position = UDim2.new(0,15,0,20)
-StickerInput.PlaceholderText = "Enter Image ID"
-StickerInput.Parent = StickerImportPopup
-
-local SaveStickerButton = Instance.new("TextButton")
-SaveStickerButton.Size = UDim2.new(0,100,0,30)
-SaveStickerButton.Position = UDim2.new(0,40,1,-45)
-SaveStickerButton.Text = "Save"
-SaveStickerButton.Parent = StickerImportPopup
-
-local CancelStickerButton = Instance.new("TextButton")
-CancelStickerButton.Size = UDim2.new(0,100,0,30)
-CancelStickerButton.Position = UDim2.new(1,-140,1,-45)
-CancelStickerButton.Text = "Cancel"
-CancelStickerButton.Parent = StickerImportPopup
-
-ImportStickerButton.MouseButton1Click:Connect(function()
-    StickerImportPopup.Visible = true
-end)
-
-SaveStickerButton.MouseButton1Click:Connect(function()
-    local stickerId = StickerInput.Text:match("%d+")
-    local ok, url = AddCustomSticker(stickerId or "")
-    if ok and url then
-        CreateStickerCard(url)
-    end
-    StickerInput.Text = ""
-    StickerImportPopup.Visible = false
-end)
-
-CancelStickerButton.MouseButton1Click:Connect(function()
-    StickerInput.Text = ""
-    StickerImportPopup.Visible = false
-end)
 
 local PreviewCard = Instance.new("Frame")
 PreviewCard.Size = UDim2.new(1, 0, 0, 50)
