@@ -1460,7 +1460,7 @@ local function DisplayNewMessageNotif(msgData, messageId)
     local formattedName = GetFormattedDisplayName(rawName, isClient)
     local rawText = msgData.Text or ""
     if msgData.IsJoinMessage then
-        rawText = "has Joined the Server Chat"
+        rawText = tostring(msgData.JoinedDisplayName or msgData.Text or "Unknown") .. " has Joined the Server Chat"
     elseif string.sub(rawText, 1, 11) == "rbxthumb://" or string.sub(rawText, 1, 13) == "rbxassetid://" then
         rawText = "[Sticker]"
     end
@@ -1538,7 +1538,7 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifText.Position = UDim2.new(0, 54, 0, 4)
     notifText.BackgroundTransparency = 1
     notifText.Font = Enum.Font.GothamBold
-    notifText.Text = msgData.IsJoinMessage and (formattedName .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
+    notifText.Text = msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
     notifText.TextColor3 = Color3.fromRGB(245, 245, 250)
     notifText.TextSize = 11
     notifText.TextWrapped = true
@@ -2910,12 +2910,12 @@ end
 -- ============================================================================
 local function ShowLocalSystemMessage(text, isError)
     local msg = {
-        Username = LocalPlayer.Name,
+        Username = "AI_MoD",
         DisplayName = "AI MoD",
         Text = tostring(text),
         Timestamp = os.time() + (math.random() / 1000),
-        Role = "Recruit",
-        PfpId = CurrentPfpId,
+        Role = "BOT",
+        PfpId = 78588114275746,
         IsPrivate = false,
         SystemMessage = true,
         LocalOnly = true,
@@ -3138,12 +3138,13 @@ end)
 
 local function BuildJoinMessagePayload()
     return {
-        Username = LocalPlayer.Name,
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = "has Joined the Server Chat",
+        Username = "AI_MoD",
+        DisplayName = "AI MoD",
+        JoinedDisplayName = LocalPlayer.DisplayName,
+        Text = LocalPlayer.DisplayName .. " has Joined the Server Chat",
         Timestamp = os.time(),
-        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
-        PfpId = CurrentPfpId,
+        Role = "BOT",
+        PfpId = 78588114275746,
         IsPrivate = false,
         IsJoinMessage = true,
         JoinEventId = JoinEventId,
