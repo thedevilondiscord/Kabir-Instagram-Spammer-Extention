@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
 local ContentProvider = game:GetService("ContentProvider")
 
 local LocalPlayer = Players.LocalPlayer
@@ -21,6 +22,7 @@ local ScriptStartTime = os.time()
 -- Forward Declaration for Inputs & Globals
 local MessageInput = nil
 local SendChatMessage = nil
+local CreateMessageCard = nil
 
 -- Anti-Spam Tracking State
 local LastSentMessageText = ""
@@ -2064,7 +2066,7 @@ InputCorner.Parent = InputBarFrame
 
 MessageInput = Instance.new("TextBox")
 MessageInput.Name = "MessageInput"
-MessageInput.Size = UDim2.new(1, -95, 1, -8)
+MessageInput.Size = UDim2.new(1, -132, 1, -8)
 MessageInput.Position = UDim2.new(0, 10, 0, 4)
 MessageInput.BackgroundTransparency = 1
 MessageInput.Font = Enum.Font.GothamMedium
@@ -2106,6 +2108,64 @@ end)
 StickerToggleButton.MouseButton1Click:Connect(function()
     StickerPanel.Visible = not StickerPanel.Visible
 end)
+
+-- Global-chat-only server invite button. It is hidden whenever the
+-- active tab is not GLOBAL and sends the current PlaceId + JobId as a
+-- structured global message so recipients can join this exact server.
+local ServerInviteButton = Instance.new("TextButton")
+ServerInviteButton.Name = "ServerInviteButton"
+ServerInviteButton.Size = UDim2.new(0, 34, 1, -8)
+ServerInviteButton.Position = UDim2.new(1, -118, 0, 4)
+ServerInviteButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30)
+ServerInviteButton.BackgroundTransparency = 0.2
+ServerInviteButton.Font = Enum.Font.GothamBold
+ServerInviteButton.Text = "↗"
+ServerInviteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ServerInviteButton.TextSize = 15
+ServerInviteButton.AutoButtonColor = true
+ServerInviteButton.ZIndex = 12
+ServerInviteButton.Parent = InputBarFrame
+
+local ServerInviteCorner = Instance.new("UICorner")
+ServerInviteCorner.CornerRadius = UDim.new(0, 8)
+ServerInviteCorner.Parent = ServerInviteButton
+
+local function SendServerInvite()
+    if ActiveTab ~= "GLOBAL" then return end
+
+    local clientMessageId = LocalPlayer.UserId .. "_invite_" ..
+        tostring(math.floor(os.clock() * 1000000)) .. "_" ..
+        tostring(math.random(100000, 999999))
+
+    local payload = {
+        ClientMessageId = clientMessageId,
+        Username = LocalPlayer.Name,
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = "invited you to join their current server",
+        Timestamp = os.time(),
+        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
+        PfpId = CurrentPfpId,
+        IsPrivate = false,
+        IsServerInvite = true,
+        PlaceId = game.PlaceId,
+        JobId = SERVER_JOB_ID,
+    }
+
+    local localKey = "local_" .. clientMessageId
+    GlobalCachedMessages[localKey] = payload
+
+    local immediateCard = CreateMessageCard(payload, true)
+    immediateCard.Visible = true
+    table.insert(GlobalUIElements, immediateCard)
+
+    task.spawn(function()
+        pcall(function()
+            HttpRequest(GLOBAL_MESSAGES_ENDPOINT, "POST", payload)
+        end)
+    end)
+end
+
+ServerInviteButton.MouseButton1Click:Connect(SendServerInvite)
 
 PrivateModePill = Instance.new("TextButton")
 PrivateModePill.Name = "PrivateModePill"
@@ -2571,6 +2631,7 @@ local function SwitchTab(newTab)
     AboutFrame.Visible = (newTab == "ABOUT")
     ProfileFrame.Visible = (newTab == "PROFILE")
     StickerPanel.Visible = false
+    ServerInviteButton.Visible = (newTab == "GLOBAL")
 
     GlobalTabBtn.BackgroundColor3 = (newTab == "GLOBAL") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
     ServerTabBtn.BackgroundColor3 = (newTab == "SERVER") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
@@ -2591,10 +2652,13 @@ ServerTabBtn.MouseButton1Click:Connect(function() SwitchTab("SERVER") end)
 ProfileTabBtn.MouseButton1Click:Connect(function() SwitchTab("PROFILE") end)
 AboutTabBtn.MouseButton1Click:Connect(function() SwitchTab("ABOUT") end)
 
+-- Initial state: GLOBAL is the default tab.
+ServerInviteButton.Visible = true
+
 -- ============================================================================
 -- MESSAGE CARD RENDERER (WITH INTEGRATED PROFILE PICTURE)
 -- ============================================================================
-local function CreateMessageCard(msgData, isGlobal)
+CreateMessageCard = function(msgData, isGlobal)
     local frame = Instance.new("Frame")
     frame.Name = "MessageCard"
     frame.Size = UDim2.new(1, 0, 0, 0)
@@ -2694,7 +2758,59 @@ local function CreateMessageCard(msgData, isGlobal)
 
     local isSticker = string.sub(msgData.Text, 1, 11) == "rbxthumb://" or string.sub(msgData.Text, 1, 13) == "rbxassetid://"
 
-    if isSticker then
+    if msgData.IsServerInvite and msgData.PlaceId and msgData.JobId then
+        local inviteButton = Instance.new("TextButton")
+        inviteButton.Name = "ServerInviteCardButton"
+        inviteButton.Size = UDim2.new(1, -48, 0, 34)
+        inviteButton.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
+        inviteButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+        inviteButton.BackgroundTransparency = 0.15
+        inviteButton.BorderSizePixel = 0
+        inviteButton.Font = Enum.Font.GothamBold
+        inviteButton.Text = "  ↗  JOIN CURRENT SERVER  "
+        inviteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        inviteButton.TextSize = 11
+        inviteButton.TextXAlignment = Enum.TextXAlignment.Center
+        inviteButton.ZIndex = 12
+        inviteButton.Parent = frame
+
+        local inviteCorner = Instance.new("UICorner")
+        inviteCorner.CornerRadius = UDim.new(0, 7)
+        inviteCorner.Parent = inviteButton
+
+        local inviteInfo = Instance.new("TextLabel")
+        inviteInfo.Name = "ServerInviteInfo"
+        inviteInfo.Size = UDim2.new(1, -48, 0, 18)
+        inviteInfo.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 94 or 60)
+        inviteInfo.BackgroundTransparency = 1
+        inviteInfo.Font = Enum.Font.Gotham
+        inviteInfo.Text = tostring(msgData.Text or "invited you to join their current server")
+        inviteInfo.TextColor3 = Color3.fromRGB(210, 210, 220)
+        inviteInfo.TextSize = 9
+        inviteInfo.TextXAlignment = Enum.TextXAlignment.Left
+        inviteInfo.TextYAlignment = Enum.TextYAlignment.Center
+        inviteInfo.TextWrapped = true
+        inviteInfo.ZIndex = 12
+        inviteInfo.Parent = frame
+
+        inviteButton.MouseButton1Click:Connect(function()
+            local ok, err = pcall(function()
+                TeleportService:TeleportToPlaceInstance(
+                    tonumber(msgData.PlaceId),
+                    tostring(msgData.JobId),
+                    LocalPlayer
+                )
+            end)
+
+            if not ok then
+                ShowLocalSystemMessage("[AI MoD] : Unable to join server: " .. tostring(err), true)
+            end
+        end)
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingBottom = UDim.new(0, 8)
+        pad.Parent = frame
+    elseif isSticker then
         local stickerImg = Instance.new("ImageLabel")
         stickerImg.Name = "StickerMsg"
         stickerImg.Size = UDim2.new(0, 80, 0, 80)
