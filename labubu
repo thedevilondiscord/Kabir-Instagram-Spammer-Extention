@@ -6,8 +6,8 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
 local ContentProvider = game:GetService("ContentProvider")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
 local lplr = LocalPlayer
@@ -970,6 +970,9 @@ end
 local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
+    if data and (method == "POST" or method == "PUT" or method == "PATCH") and data.Timestamp == nil then
+        data.Timestamp = os.time()
+    end
     if not http_req then return nil end
     local success, response = pcall(function()
         return http_req({
@@ -2108,50 +2111,6 @@ StickerToggleButton.MouseButton1Click:Connect(function()
     StickerPanel.Visible = not StickerPanel.Visible
 end)
 
--- Server location/share invite button
-local ServerInviteButton = Instance.new("TextButton")
-ServerInviteButton.Name = "ServerInviteButton"
-ServerInviteButton.Size = UDim2.new(0, 34, 1, -8)
-ServerInviteButton.Position = UDim2.new(1, -42, 0, 4)
-ServerInviteButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-ServerInviteButton.BackgroundTransparency = 0.2
-ServerInviteButton.Font = Enum.Font.GothamBold
-ServerInviteButton.Text = "📍"
-ServerInviteButton.TextColor3 = Color3.fromRGB(255,255,255)
-ServerInviteButton.TextSize = 14
-ServerInviteButton.Parent = InputBarFrame
-
-local ServerInviteCorner = Instance.new("UICorner")
-ServerInviteCorner.CornerRadius = UDim.new(0,8)
-ServerInviteCorner.Parent = ServerInviteButton
-
-ServerInviteButton.MouseButton1Click:Connect(function()
-    local targetUser = PrivateModeTargetUsername
-    local targetDisplay = PrivateModeTargetDisplayName
-    local inviteText = "📍 Server Invite from " .. GetFormattedDisplayName(LocalPlayer.DisplayName, true)
-
-    local payload = {
-        ClientMessageId = LocalPlayer.UserId .. "_invite_" .. tostring(os.clock()),
-        Username = LocalPlayer.Name,
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = inviteText,
-        Timestamp = os.time(),
-        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
-        PfpId = CurrentPfpId,
-        IsPrivate = targetUser ~= nil,
-        TargetUsername = targetUser,
-        TargetDisplayName = targetDisplay,
-        ServerInvite = true,
-        PlaceId = game.PlaceId,
-        ServerJobId = SERVER_JOB_ID
-    }
-
-    if targetUser or ActiveTab == "GLOBAL" then
-        local endpoint = (targetUser or ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
-        HttpRequest(endpoint, "POST", payload)
-    end
-end)
-
 PrivateModePill = Instance.new("TextButton")
 PrivateModePill.Name = "PrivateModePill"
 PrivateModePill.Size = UDim2.new(0, 150, 0, 22)
@@ -2739,30 +2698,6 @@ local function CreateMessageCard(msgData, isGlobal)
 
     local isSticker = string.sub(msgData.Text, 1, 11) == "rbxthumb://" or string.sub(msgData.Text, 1, 13) == "rbxassetid://"
 
-    if msgData.ServerInvite then
-        local inviteBtn = Instance.new("TextButton")
-        inviteBtn.Name = "ServerInviteButton"
-        inviteBtn.Size = UDim2.new(0, 180, 0, 32)
-        inviteBtn.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 60 or 28)
-        inviteBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
-        inviteBtn.BackgroundTransparency = 0.15
-        inviteBtn.Font = Enum.Font.GothamBold
-        inviteBtn.Text = "📍 Join Server Invite"
-        inviteBtn.TextColor3 = Color3.fromRGB(255,255,255)
-        inviteBtn.TextSize = 12
-        inviteBtn.Parent = frame
-
-        local inviteCorner = Instance.new("UICorner")
-        inviteCorner.CornerRadius = UDim.new(0,8)
-        inviteCorner.Parent = inviteBtn
-
-        inviteBtn.MouseButton1Click:Connect(function()
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(msgData.PlaceId, msgData.ServerJobId, LocalPlayer)
-            end)
-        end)
-    end
-
     if isSticker then
         local stickerImg = Instance.new("ImageLabel")
         stickerImg.Name = "StickerMsg"
@@ -2795,6 +2730,35 @@ local function CreateMessageCard(msgData, isGlobal)
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 6)
         pad.Parent = frame
+    end
+
+
+    if msgData.IsServerInvite and msgData.PlaceId and msgData.JobId then
+        local joinButton = Instance.new("TextButton")
+        joinButton.Name = "JoinServerButton"
+        joinButton.Size = UDim2.new(0, 120, 0, 24)
+        joinButton.Position = UDim2.new(0, 38, 1, -30)
+        joinButton.BackgroundColor3 = Color3.fromRGB(30, 150, 70)
+        joinButton.Text = "Join Server"
+        joinButton.TextColor3 = Color3.fromRGB(255,255,255)
+        joinButton.Font = Enum.Font.GothamBold
+        joinButton.TextSize = 10
+        joinButton.ZIndex = 20
+        joinButton.Parent = frame
+
+        local joinCorner = Instance.new("UICorner")
+        joinCorner.CornerRadius = UDim.new(0,6)
+        joinCorner.Parent = joinButton
+
+        joinButton.MouseButton1Click:Connect(function()
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(
+                    tonumber(msgData.PlaceId),
+                    tostring(msgData.JobId),
+                    LocalPlayer
+                )
+            end)
+        end)
     end
 
     -- Transparent interaction layer: long-pressing any part of the message opens the options menu.
@@ -2899,6 +2863,49 @@ local function TestNotification()
         PfpId = CurrentPfpId,
         IsPrivate = false,
     }, testId)
+end
+
+
+-- ============================================================================
+-- SERVER INVITE SYSTEM (Firebase compatible)
+-- ============================================================================
+local function CreateServerInvitePayload()
+    return {
+        Username = LocalPlayer.Name,
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = "Server Invite",
+        Timestamp = os.time(),
+        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
+        PfpId = CurrentPfpId,
+        IsPrivate = false,
+        IsServerInvite = true,
+        PlaceId = game.PlaceId,
+        JobId = SERVER_JOB_ID,
+    }
+end
+
+local function SendServerInvite()
+    local payload = CreateServerInvitePayload()
+    local targetUrl = (ActiveTab == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
+
+    if IsPrivateModeActive() and PrivateModeTargetUsername then
+        payload.IsPrivate = true
+        payload.TargetUsername = PrivateModeTargetUsername
+        payload.TargetDisplayName = PrivateModeTargetDisplayName
+        targetUrl = GLOBAL_MESSAGES_ENDPOINT
+    end
+
+    task.spawn(function()
+        HttpRequest(targetUrl, "POST", payload)
+    end)
+
+    local cache = (ActiveTab == "GLOBAL") and GlobalCachedMessages or ServerCachedMessages
+    local ui = (ActiveTab == "GLOBAL") and GlobalUIElements or ServerUIElements
+    local id = "local_invite_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000,9999))
+    cache[id] = payload
+    local card = CreateMessageCard(payload, ActiveTab == "GLOBAL")
+    card.Visible = true
+    table.insert(ui, card)
 end
 
 SendChatMessage = function()
@@ -3083,6 +3090,23 @@ MessageInput.FocusLost:Connect(function()
         end
     end)
 end)
+
+
+-- Server invite/share button
+local ServerInviteButton = Instance.new("TextButton")
+ServerInviteButton.Name = "ServerInviteButton"
+ServerInviteButton.Size = UDim2.new(0, 34, 0, 30)
+ServerInviteButton.Position = UDim2.new(1, -76, 0.5, -15)
+ServerInviteButton.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+ServerInviteButton.Text = "📍"
+ServerInviteButton.TextColor3 = Color3.fromRGB(255,255,255)
+ServerInviteButton.Font = Enum.Font.GothamBold
+ServerInviteButton.TextSize = 16
+ServerInviteButton.Parent = InputBarFrame
+local ServerInviteCorner = Instance.new("UICorner")
+ServerInviteCorner.CornerRadius = UDim.new(0,8)
+ServerInviteCorner.Parent = ServerInviteButton
+ServerInviteButton.MouseButton1Click:Connect(SendServerInvite)
 
 SendButton.MouseButton1Click:Connect(SendChatMessage)
 MessageInput.FocusLost:Connect(function(enterPressed)
