@@ -1,292 +1,167 @@
--- BLACK CURSED HAND AURA (RED EDGE GLOW ONLY)
+-- Simple Mahoraga Wheel
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
 
-local player = Players.LocalPlayer
+local player=Players.LocalPlayer
 
-local auraEnabled = true
-local handParts = {}
+local folder=Instance.new("Folder")
+folder.Name="MahoragaWheel"
+folder.Parent=workspace
 
--- Distance = 4, Height = 4
-local BASE_OFFSET = Vector3.new(0,4,4)
+local SCALE=0.6
+local DISTANCE=3
+local HEIGHT=3
+local ANGLEX=-30
 
+local COLOR=Color3.new(0,0,0)
 
---------------------------------------------------
--- CREATE BLACK HAND PART
---------------------------------------------------
+local RADIUS=6.5
+local SEGMENTS=100
+local ROD_LENGTH=13
+local BALL_SIZE=2.5
+local CENTER_SIZE=2.8
 
-local function createCursedPart(name,size)
+local function part(name,size,shape)
+	local p=Instance.new("Part")
+	p.Name=name
+	p.Size=size
+	p.Anchored=true
+	p.CanCollide=false
+	p.Material=Enum.Material.Neon
+	p.Color=COLOR
+	p.CastShadow=false
+	if shape then p.Shape=shape end
+	p.Parent=folder
 
-    local part = Instance.new("Part")
+	local glow=Instance.new("PointLight")
+	glow.Brightness=1
+	glow.Range=10
+	glow.Color=COLOR
+	glow.Parent=p
 
-    part.Name = name
-    part.Size = size
-
-    -- Black hand
-    part.Material = Enum.Material.Neon
-    part.Color = Color3.fromRGB(0,0,0)
-
-    part.CanCollide = false
-    part.Anchored = true
-    part.Transparency = 0.05
-
-
-    -- Red edge glow only
-    local highlight = Instance.new("Highlight")
-
-    highlight.FillColor = Color3.fromRGB(255,0,0)
-    highlight.OutlineColor = Color3.fromRGB(255,0,0)
-
-    -- Do not fill the hand red
-    highlight.FillTransparency = 1
-    highlight.OutlineTransparency = 0.1
-
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-
-    highlight.Parent = part
-
-
-    -- Disabled light glow
-    local light = Instance.new("PointLight")
-
-    light.Color = Color3.fromRGB(255,0,0)
-    light.Brightness = 4
-    light.Range = 0
-
-    light.Parent = part
-
-
-    return part
-
+	return p
 end
 
+local function createWheel(char)
+	folder:ClearAllChildren()
 
+	local root=char:WaitForChild("HumanoidRootPart")
 
---------------------------------------------------
--- CLEAR AURA
---------------------------------------------------
+	local center=part(
+		"Center",
+		Vector3.new(
+			CENTER_SIZE*SCALE,
+			CENTER_SIZE*SCALE,
+			CENTER_SIZE*SCALE
+		),
+		Enum.PartType.Ball
+	)
 
-local function clearAura()
+	local ring={}
 
-    for _,p in ipairs(handParts) do
+	for i=1,SEGMENTS do
+		ring[i]=part(
+			"Ring",
+			Vector3.new(.2,.45,.35)
+		)
+	end
 
-        if p then
-            p:Destroy()
-        end
+	local rods={}
+	local balls={}
 
-    end
+	for i=1,8 do
+		rods[i]=part(
+			"Spoke",
+			Vector3.new(
+				.45*SCALE,
+				ROD_LENGTH*SCALE,
+				.45*SCALE
+			)
+		)
 
-    table.clear(handParts)
+		balls[i]=part(
+			"Ball",
+			Vector3.new(
+				BALL_SIZE*SCALE,
+				BALL_SIZE*SCALE,
+				BALL_SIZE*SCALE
+			),
+			Enum.PartType.Ball
+		)
+	end
 
+	local spin=0
+
+	RunService.RenderStepped:Connect(function(dt)
+
+		if not char.Parent then return end
+
+		root=char:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+
+		spin+=dt*0.6
+
+		local radius=RADIUS*SCALE
+
+		local pos=
+			root.Position
+			-root.CFrame.LookVector*DISTANCE
+			+root.CFrame.UpVector*HEIGHT
+
+		local cf=
+			CFrame.lookAt(
+				pos,
+				pos+root.CFrame.LookVector
+			)
+			*CFrame.Angles(
+				math.rad(ANGLEX),
+				0,
+				0
+			)
+
+		center.CFrame=cf
+
+		for i,v in ipairs(ring) do
+			local a=(math.pi*2/SEGMENTS)*i
+
+			v.CFrame=
+				cf
+				*CFrame.new(
+					math.cos(a)*radius,
+					math.sin(a)*radius,
+					0
+				)
+				*CFrame.Angles(0,0,a)
+		end
+
+		for i=1,8 do
+			local a=(math.pi*2/8)*i+spin
+
+			rods[i].CFrame=
+				cf
+				*CFrame.Angles(
+					0,
+					0,
+					a
+				)
+
+			balls[i].CFrame=
+				cf
+				*CFrame.new(
+					math.cos(a)*radius*1.45,
+					math.sin(a)*radius*1.45,
+					0
+				)
+		end
+	end)
 end
 
-
-
---------------------------------------------------
--- SPAWN HAND
---------------------------------------------------
-
-local function spawnAura()
-
-    clearAura()
-
-    local character = player.Character or player.CharacterAdded:Wait()
-
-    local root = character:WaitForChild("HumanoidRootPart")
-
-
-
-    -- Palm
-
-    local palm = createCursedPart(
-        "BlackCursedPalm",
-        Vector3.new(3.5,3.5,1)
-    )
-
-    palm.Parent = character
-
-    table.insert(handParts,palm)
-
-
-
-    -- Fingers
-
-    local fingerData = {
-
-        {"Thumb",-2.2,-0.5,2.5,45},
-
-        {"Index",-1.2,2,3.5,10},
-
-        {"Middle",0,2.3,4,0},
-
-        {"Ring",1.2,2,3.5,-10},
-
-        {"Pinky",2,1,2.8,-25}
-
-    }
-
-
-
-    local fingers = {}
-
-
-
-    for _,d in ipairs(fingerData) do
-
-
-        local finger = createCursedPart(
-
-            "BlackCursed"..d[1],
-
-            Vector3.new(0.8,d[4],0.8)
-
-        )
-
-
-        finger.Parent = character
-
-
-        table.insert(
-            fingers,
-            {
-                part = finger,
-                x = d[2],
-                y = d[3],
-                length = d[4],
-                rot = math.rad(d[5])
-            }
-        )
-
-
-        table.insert(handParts,finger)
-
-    end
-
-
-
-
-    --------------------------------------------------
-    -- ANIMATION
-    --------------------------------------------------
-
-    task.spawn(function()
-
-
-        while auraEnabled and character.Parent do
-
-
-            local t = tick()
-
-
-            local floatY = math.sin(t * 1.5) * 0.5
-
-            local twitchX = math.noise(t * 8,0,0) * 0.3
-
-
-
-            local baseCFrame = root.CFrame
-
-
-
-            palm.CFrame =
-
-                baseCFrame
-
-                *
-
-                CFrame.Angles(
-                    math.rad(-20),
-                    0,
-                    0
-                )
-
-                *
-
-                CFrame.new(
-                    BASE_OFFSET.X + twitchX,
-                    BASE_OFFSET.Y + floatY,
-                    BASE_OFFSET.Z
-                )
-
-
-
-
-
-            for i,f in ipairs(fingers) do
-
-
-                local grasp =
-
-                    math.rad(-30)
-
-                    +
-
-                    math.sin(t*2+i)
-
-                    *
-
-                    math.rad(20)
-
-
-
-
-                local pivotPoint =
-
-                    palm.CFrame
-
-                    *
-
-                    CFrame.new(
-                        f.x,
-                        f.y,
-                        0
-                    )
-
-
-
-
-                f.part.CFrame =
-
-                    pivotPoint
-
-                    *
-
-                    CFrame.Angles(
-                        grasp,
-                        0,
-                        f.rot
-                    )
-
-                    *
-
-                    CFrame.new(
-                        0,
-                        f.length/2,
-                        0
-                    )
-
-
-            end
-
-
-
-            RunService.Heartbeat:Wait()
-
-
-        end
-
-
-        clearAura()
-
-    end)
-
+player.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	createWheel(char)
+end)
+
+if player.Character then
+	createWheel(player.Character)
 end
-
-
-
---------------------------------------------------
--- START
---------------------------------------------------
-
-spawnAura()
