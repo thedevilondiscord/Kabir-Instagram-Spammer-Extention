@@ -1,0 +1,292 @@
+-- BLACK CURSED HAND AURA (RED EDGE GLOW ONLY)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local auraEnabled = true
+local handParts = {}
+
+-- Distance = 4, Height = 4
+local BASE_OFFSET = Vector3.new(0,4,4)
+
+
+--------------------------------------------------
+-- CREATE BLACK HAND PART
+--------------------------------------------------
+
+local function createCursedPart(name,size)
+
+    local part = Instance.new("Part")
+
+    part.Name = name
+    part.Size = size
+
+    -- Black hand
+    part.Material = Enum.Material.Neon
+    part.Color = Color3.fromRGB(0,0,0)
+
+    part.CanCollide = false
+    part.Anchored = true
+    part.Transparency = 0.05
+
+
+    -- Red edge glow only
+    local highlight = Instance.new("Highlight")
+
+    highlight.FillColor = Color3.fromRGB(255,0,0)
+    highlight.OutlineColor = Color3.fromRGB(255,0,0)
+
+    -- Do not fill the hand red
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0.1
+
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+    highlight.Parent = part
+
+
+    -- Disabled light glow
+    local light = Instance.new("PointLight")
+
+    light.Color = Color3.fromRGB(255,0,0)
+    light.Brightness = 4
+    light.Range = 0
+
+    light.Parent = part
+
+
+    return part
+
+end
+
+
+
+--------------------------------------------------
+-- CLEAR AURA
+--------------------------------------------------
+
+local function clearAura()
+
+    for _,p in ipairs(handParts) do
+
+        if p then
+            p:Destroy()
+        end
+
+    end
+
+    table.clear(handParts)
+
+end
+
+
+
+--------------------------------------------------
+-- SPAWN HAND
+--------------------------------------------------
+
+local function spawnAura()
+
+    clearAura()
+
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    local root = character:WaitForChild("HumanoidRootPart")
+
+
+
+    -- Palm
+
+    local palm = createCursedPart(
+        "BlackCursedPalm",
+        Vector3.new(3.5,3.5,1)
+    )
+
+    palm.Parent = character
+
+    table.insert(handParts,palm)
+
+
+
+    -- Fingers
+
+    local fingerData = {
+
+        {"Thumb",-2.2,-0.5,2.5,45},
+
+        {"Index",-1.2,2,3.5,10},
+
+        {"Middle",0,2.3,4,0},
+
+        {"Ring",1.2,2,3.5,-10},
+
+        {"Pinky",2,1,2.8,-25}
+
+    }
+
+
+
+    local fingers = {}
+
+
+
+    for _,d in ipairs(fingerData) do
+
+
+        local finger = createCursedPart(
+
+            "BlackCursed"..d[1],
+
+            Vector3.new(0.8,d[4],0.8)
+
+        )
+
+
+        finger.Parent = character
+
+
+        table.insert(
+            fingers,
+            {
+                part = finger,
+                x = d[2],
+                y = d[3],
+                length = d[4],
+                rot = math.rad(d[5])
+            }
+        )
+
+
+        table.insert(handParts,finger)
+
+    end
+
+
+
+
+    --------------------------------------------------
+    -- ANIMATION
+    --------------------------------------------------
+
+    task.spawn(function()
+
+
+        while auraEnabled and character.Parent do
+
+
+            local t = tick()
+
+
+            local floatY = math.sin(t * 1.5) * 0.5
+
+            local twitchX = math.noise(t * 8,0,0) * 0.3
+
+
+
+            local baseCFrame = root.CFrame
+
+
+
+            palm.CFrame =
+
+                baseCFrame
+
+                *
+
+                CFrame.Angles(
+                    math.rad(-20),
+                    0,
+                    0
+                )
+
+                *
+
+                CFrame.new(
+                    BASE_OFFSET.X + twitchX,
+                    BASE_OFFSET.Y + floatY,
+                    BASE_OFFSET.Z
+                )
+
+
+
+
+
+            for i,f in ipairs(fingers) do
+
+
+                local grasp =
+
+                    math.rad(-30)
+
+                    +
+
+                    math.sin(t*2+i)
+
+                    *
+
+                    math.rad(20)
+
+
+
+
+                local pivotPoint =
+
+                    palm.CFrame
+
+                    *
+
+                    CFrame.new(
+                        f.x,
+                        f.y,
+                        0
+                    )
+
+
+
+
+                f.part.CFrame =
+
+                    pivotPoint
+
+                    *
+
+                    CFrame.Angles(
+                        grasp,
+                        0,
+                        f.rot
+                    )
+
+                    *
+
+                    CFrame.new(
+                        0,
+                        f.length/2,
+                        0
+                    )
+
+
+            end
+
+
+
+            RunService.Heartbeat:Wait()
+
+
+        end
+
+
+        clearAura()
+
+    end)
+
+end
+
+
+
+--------------------------------------------------
+-- START
+--------------------------------------------------
+
+spawnAura()
