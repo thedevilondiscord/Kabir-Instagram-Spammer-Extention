@@ -479,11 +479,18 @@ local baseStickers = {
     "rbxthumb://type=Asset&id=125983689093696&w=420&h=420",
     "rbxthumb://type=Asset&id=75506307767417&w=420&h=420",
     "rbxthumb://type=Asset&id=116836682474524&w=420&h=420",
+    "rbxthumb://type=Asset&id=122120065074662&w=420&h=420",
+    "rbxthumb://type=Asset&id=78357547416322&w=420&h=420",
+    "rbxthumb://type=Asset&id=91482996346477&w=420&h=420",
     "rbxthumb://type=Asset&id=102568342129627&w=420&h=420",
     "rbxthumb://type=Asset&id=95097775871116&w=420&h=420",
     "rbxthumb://type=Asset&id=112745447456329&w=420&h=420",
     "rbxthumb://type=Asset&id=106977485921472&w=420&h=420",
     "rbxthumb://type=Asset&id=121310984106237&w=420&h=420",
+    "rbxthumb://type=Asset&id=105883736105171&w=420&h=420",
+    "rbxthumb://type=Asset&id=72805970059033&w=420&h=420",
+    "rbxthumb://type=Asset&id=103116965662563&w=420&h=420",
+    "rbxthumb://type=Asset&id=81834588444558&w=420&h=420",
     "rbxthumb://type=Asset&id=107564048134950&w=420&h=420",
     "rbxthumb://type=Asset&id=79650418792128&w=420&h=420",
     "rbxthumb://type=Asset&id=139765908340185&w=420&h=420",
@@ -657,14 +664,14 @@ local baseStickers = {
     "rbxthumb://type=Asset&id=114738142020573&w=420&h=420",
     "rbxthumb://type=Asset&id=100644268219896&w=420&h=420",
     "rbxthumb://type=Asset&id=82732486060449&w=420&h=420",
-    "rbxthumb://type=Asset&id=84345768144066&w=420&h=420",
+    "rbxthumb://type=Asset&id=89860739826332&w=420&h=420",
     "rbxthumb://type=Asset&id=85611228914039&w=420&h=420",
     "rbxthumb://type=Asset&id=126857592936719&w=420&h=420",
-    "rbxthumb://type=Asset&id=106945724992072&w=420&h=420",
-    "rbxthumb://type=Asset&id=102454731178873&w=420&h=420",
+    "rbxthumb://type=Asset&id=120233374498907&w=420&h=420",
+    "rbxthumb://type=Asset&id=138611043437875&w=420&h=420",
     "rbxthumb://type=Asset&id=33230128&w=420&h=420",
-    "rbxthumb://type=Asset&id=33199969&w=420&h=420",
-    "rbxthumb://type=Asset&id=33200194&w=420&h=420",
+    "rbxthumb://type=Asset&id=104379643177016&w=420&h=420",
+    "rbxthumb://type=Asset&id=139529399352583&w=420&h=420",
     "rbxthumb://type=Asset&id=33200310&w=420&h=420",
     "rbxthumb://type=Asset&id=33200394&w=420&h=420",
     "rbxthumb://type=Asset&id=250852269&w=420&h=420",
@@ -1282,7 +1289,7 @@ ToggleButton.Position = UDim2.new(0.02, 0, 0.5, 0)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 ToggleButton.BackgroundTransparency = 0.25
 ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "  ◈  KRONOS"
+ToggleButton.Text = "  👁️  KRONOS"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.TextSize = 11
 ToggleButton.AutoButtonColor = false
@@ -1367,7 +1374,7 @@ local function SetChatVisibility(show)
         move:Play()
         scale:Play()
         move.Completed:Wait()
-        ToggleButton.Text = "  ◈  KRONOS"
+        ToggleButton.Text = "  👁️  KRONOS"
     else
         ChatIsShown = false
 
@@ -1388,7 +1395,7 @@ local function SetChatVisibility(show)
         if not ChatIsShown then
             MainFrame.Visible = false
         end
-        ToggleButton.Text = "  ◇  KRONOS"
+        ToggleButton.Text = "  ⭕  KRONOS"
     end
 
     ChatTransitionBusy = false
@@ -2119,7 +2126,7 @@ ServerInviteButton.Position = UDim2.new(1, -118, 0, 4)
 ServerInviteButton.BackgroundColor3 = Color3.fromRGB(220, 30, 30)
 ServerInviteButton.BackgroundTransparency = 0.2
 ServerInviteButton.Font = Enum.Font.GothamBold
-ServerInviteButton.Text = "↗"
+ServerInviteButton.Text = "↗️"
 ServerInviteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ServerInviteButton.TextSize = 15
 ServerInviteButton.AutoButtonColor = true
