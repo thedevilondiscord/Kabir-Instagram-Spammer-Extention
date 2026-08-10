@@ -2663,6 +2663,109 @@ AboutTabBtn.MouseButton1Click:Connect(function() SwitchTab("ABOUT") end)
 ServerInviteButton.Visible = true
 
 -- ============================================================================
+-- STICKER ENLARGED PREVIEW
+-- ============================================================================
+local StickerPreviewGui = nil
+
+local function CloseStickerPreview()
+    if StickerPreviewGui then
+        StickerPreviewGui:Destroy()
+        StickerPreviewGui = nil
+    end
+end
+
+local function ShowStickerPreview(stickerUrl)
+    if not stickerUrl or stickerUrl == "" then return end
+
+    CloseStickerPreview()
+
+    StickerPreviewGui = Instance.new("Frame")
+    StickerPreviewGui.Name = "StickerPreviewGui"
+    StickerPreviewGui.Size = UDim2.new(1, 0, 1, 0)
+    StickerPreviewGui.Position = UDim2.new(0, 0, 0, 0)
+    StickerPreviewGui.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    StickerPreviewGui.BackgroundTransparency = 0.35
+    StickerPreviewGui.BorderSizePixel = 0
+    StickerPreviewGui.ZIndex = 500
+    StickerPreviewGui.Parent = ScreenGui
+
+    local previewWindow = Instance.new("Frame")
+    previewWindow.Name = "StickerPreviewWindow"
+    previewWindow.Size = UDim2.new(0.72, 0, 0.72, 0)
+    previewWindow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    previewWindow.AnchorPoint = Vector2.new(0.5, 0.5)
+    previewWindow.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+    previewWindow.BackgroundTransparency = 0.05
+    previewWindow.BorderSizePixel = 0
+    previewWindow.ZIndex = 501
+    previewWindow.Parent = StickerPreviewGui
+
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 14)
+    previewCorner.Parent = previewWindow
+
+    local previewStroke = Instance.new("UIStroke")
+    previewStroke.Thickness = 2
+    previewStroke.Color = Color3.fromRGB(220, 30, 30)
+    previewStroke.Transparency = 0.15
+    previewStroke.Parent = previewWindow
+
+    local previewTitle = Instance.new("TextLabel")
+    previewTitle.Name = "Title"
+    previewTitle.Size = UDim2.new(1, -60, 0, 34)
+    previewTitle.Position = UDim2.new(0, 14, 0, 8)
+    previewTitle.BackgroundTransparency = 1
+    previewTitle.Text = "Sticker Preview"
+    previewTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    previewTitle.Font = Enum.Font.GothamBold
+    previewTitle.TextSize = 14
+    previewTitle.TextXAlignment = Enum.TextXAlignment.Left
+    previewTitle.ZIndex = 502
+    previewTitle.Parent = previewWindow
+
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 32, 0, 32)
+    closeButton.Position = UDim2.new(1, -40, 0, 7)
+    closeButton.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+    closeButton.BackgroundTransparency = 0.1
+    closeButton.BorderSizePixel = 0
+    closeButton.Text = "X"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextSize = 14
+    closeButton.AutoButtonColor = true
+    closeButton.ZIndex = 503
+    closeButton.Parent = previewWindow
+
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 8)
+    closeCorner.Parent = closeButton
+
+    closeButton.MouseButton1Click:Connect(CloseStickerPreview)
+
+    local previewImage = Instance.new("ImageLabel")
+    previewImage.Name = "StickerImage"
+    previewImage.Size = UDim2.new(1, -36, 1, -60)
+    previewImage.Position = UDim2.new(0, 18, 0, 48)
+    previewImage.BackgroundTransparency = 1
+    previewImage.Image = stickerUrl
+    previewImage.ScaleType = Enum.ScaleType.Fit
+    previewImage.ZIndex = 502
+    previewImage.Parent = previewWindow
+
+    local inputBlocker = Instance.new("TextButton")
+    inputBlocker.Name = "InputBlocker"
+    inputBlocker.Size = UDim2.new(1, 0, 1, 0)
+    inputBlocker.BackgroundTransparency = 1
+    inputBlocker.BorderSizePixel = 0
+    inputBlocker.Text = ""
+    inputBlocker.AutoButtonColor = false
+    inputBlocker.ZIndex = 500
+    inputBlocker.Parent = StickerPreviewGui
+end
+
+-- ============================================================================
 -- MESSAGE CARD RENDERER (WITH INTEGRATED PROFILE PICTURE)
 -- ============================================================================
 CreateMessageCard = function(msgData, isGlobal)
@@ -2864,19 +2967,27 @@ CreateMessageCard = function(msgData, isGlobal)
     interactionButton.Parent = frame
 
     local pressToken = 0
+    local longPressTriggered = false
+
     interactionButton.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
         pressToken = pressToken + 1
         local token = pressToken
         local pressPosition = input.Position
+        longPressTriggered = false
 
         task.delay(0.65, function()
             if token ~= pressToken or not interactionButton.Parent then return end
+            longPressTriggered = true
             ShowMessageContextMenu(msgData, pressPosition)
         end)
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
+                if token == pressToken and isSticker and not longPressTriggered then
+                    ShowStickerPreview(msgData.Text)
+                end
                 pressToken = pressToken + 1
             end
         end)
