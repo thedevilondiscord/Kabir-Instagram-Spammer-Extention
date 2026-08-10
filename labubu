@@ -1,1486 +1,257 @@
---[[
-    KRONOS CHAT - SERVER CHAT HEAD BUBBLES ADDON
-    ==============================================
-
-    FEATURES:
-      • Displays server-chat messages above the sender's head
-      • Displays YOUR OWN messages as well
-      • Only displays players currently inside this Roblox server
-      • Glassmorphic Roblox-chat-style bubbles
-      • Bright red -> black animated borders
-      • Custom Unicode text styling
-      • Each bubble lasts 7 seconds
-      • Smooth fade-out
-      • Multiple messages stack like Roblox chat
-      • Newest message appears at the bottom
-      • Older messages move upward
-      • Maximum 4 visible bubbles per player
-      • Respawn-safe
-      • Standalone addon
-]]
-
--- ============================================================
--- SERVICES
--- ============================================================
-
+-- LocalScript inside StarterPlayerScripts / StarterGui (Kronos Chat Bubble Addon)
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
+local SERVER_JOB_ID = game.JobId ~= "" and game.JobId or "Studio_Local_Server"
+local SERVER_FIREBASE_URL = "https://gcserverchat-default-rtdb.asia-southeast1.firebasedatabase.app/"
+local SERVER_MESSAGES_ENDPOINT = SERVER_FIREBASE_URL .. "server_chat/" .. SERVER_JOB_ID .. ".json"
 
--- ============================================================
--- CONFIGURATION
--- ============================================================
-
-local SERVER_JOB_ID =
-    game.JobId ~= "" and game.JobId or "Studio_Local_Server"
-
-local SERVER_FIREBASE_URL =
-    "https://gcserverchat-default-rtdb.asia-southeast1.firebasedatabase.app/"
-
-local SERVER_MESSAGES_ENDPOINT =
-    SERVER_FIREBASE_URL .. "server_chat/" .. SERVER_JOB_ID .. ".json"
-
-local BUBBLE_LIFETIME = 7
-local FADE_TIME = 0.45
-local POLL_INTERVAL = 2
-
-local MAX_BUBBLES_PER_PLAYER = 4
-
-local MAX_DISTANCE = 100
-
-local STUDS_OFFSET = Vector3.new(0, 4.7, 0)
-
-local BUBBLE_WIDTH = 240
-
--- ============================================================
--- CUSTOM UNICODE FONT
--- ============================================================
-
-local LOWER_FONT =
-    "αв¢∂єƒgнιנкℓмησρqяѕтυνωχуz"
-
-local UPPER_FONT =
-    "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘQʀꜱᴛᴜᴠᴡxʏᴢ"
-
-local LOWER_MAP = {}
-local UPPER_MAP = {}
-
-for i = 1, 26 do
-    LOWER_MAP[string.char(96 + i)] =
-        string.sub(LOWER_FONT, i, i)
-end
-
-for i = 1, 26 do
-    UPPER_MAP[string.char(64 + i)] =
-        string.sub(UPPER_FONT, i, i)
-end
-
-local function StylizeText(text)
-    text = tostring(text or "")
-
-    local output = {}
-
-    for i = 1, #text do
-        local char = string.sub(text, i, i)
-
-        if LOWER_MAP[char] then
-            table.insert(output, LOWER_MAP[char])
-
-        elseif UPPER_MAP[char] then
-            table.insert(output, UPPER_MAP[char])
-
-        else
-            table.insert(output, char)
-        end
-    end
-
-    return table.concat(output)
-end
-
--- ============================================================
--- EXECUTOR HTTP REQUEST
--- ============================================================
-
-local http_req =
-    (syn and syn.request)
-    or (http and http.request)
-    or http_request
-    or request
-    or (Fluxus and fluxus.request)
+-- Multi-executor Compatible HTTP Request Handler
+local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
-
-    if not http_req then
-        return nil
-    end
-
+    if not http_req then return nil end
     local success, response = pcall(function()
-
         return http_req({
             Url = url,
-
             Method = method or "GET",
-
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-
-            Body = data
-                and HttpService:JSONEncode(data)
-                or nil
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = data and HttpService:JSONEncode(data) or nil
         })
-
     end)
 
-    if not success then
-        return nil
-    end
-
-    if not response then
-        return nil
-    end
-
-    if not response.Body then
-        return nil
-    end
-
-    local decodeSuccess, decoded =
-        pcall(function()
-            return HttpService:JSONDecode(
-                response.Body
-            )
+    if success and response and response.Body then
+        local decodedSuccess, decodedData = pcall(function()
+            return HttpService:JSONDecode(response.Body)
         end)
-
-    if decodeSuccess then
-        return decoded
+        return decodedSuccess and decodedData or nil
     end
-
     return nil
 end
 
--- ============================================================
--- STATE
--- ============================================================
+-- ============================================================================
+-- EXACT CUSTOM MATHEMATICAL FONT MAPPER
+-- ============================================================================
+local standardChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+local customChars   = "αв¢∂єƒgнιנкℓмησρqяѕтυνωχуzαв¢∂єƒgнιנкℓмησρqяѕтυвωχуz" -- lowercase mapped
+local capsChars     = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘQʀꜱᴛᴜᴠᴡxʏᴢᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘQʀꜱᴛᴜʙᴡxʏᴢ" -- uppercase mapped
 
-local BubbleState = {}
+local fontMap = {}
 
-local ProcessedMessages = {}
-
---[[
-    BubbleState[player] = {
-
-        Gui = BillboardGui,
-
-        Container = Frame,
-
-        Messages = {
-
-            {
-                Id = string,
-                Bubble = Frame,
-                Created = number
-            }
-
-        }
-
-    }
-]]
-
--- ============================================================
--- CHARACTER ROOT
--- ============================================================
-
-local function GetCharacterRoot(player)
-
-    local character = player.Character
-
-    if not character then
-        return nil
-    end
-
-    local head = character:FindFirstChild("Head")
-
-    if head then
-        return head
-    end
-
-    return character:FindFirstChild(
-        "HumanoidRootPart"
-    )
+-- Map Lowercase
+for i = 1, 26 do
+    local src = string.sub(standardChars, i, i)
+    local target = string.sub(customChars, (i-1)*3 + 1, i*3) -- multi-byte UTF8 lookup
+    fontMap[src] = target
 end
 
--- ============================================================
--- CREATE / GET BILLBOARD
--- ============================================================
-
-local function GetOrCreateBubbleGui(player)
-
-    local head = GetCharacterRoot(player)
-
-    if not head then
-        return nil
-    end
-
-    local state = BubbleState[player]
-
-    if state
-        and state.Gui
-        and state.Gui.Parent
-        and state.Container
-        and state.Container.Parent then
-
-        if state.Gui.Adornee ~= head then
-
-            state.Gui.Adornee = head
-            state.Gui.Parent = head
-
-        end
-
-        return state
-    end
-
-    state = {
-        Gui = nil,
-        Container = nil,
-        Messages = {}
-    }
-
-    -- ========================================================
-    -- BILLBOARD
-    -- ========================================================
-
-    local billboard = Instance.new(
-        "BillboardGui"
-    )
-
-    billboard.Name =
-        "KronosServerChatBubbles"
-
-    billboard.Adornee = head
-
-    billboard.AlwaysOnTop = false
-
-    billboard.LightInfluence = 0
-
-    billboard.MaxDistance =
-        MAX_DISTANCE
-
-    billboard.Size =
-        UDim2.new(
-            0,
-            BUBBLE_WIDTH,
-            0,
-            170
-        )
-
-    billboard.StudsOffset =
-        STUDS_OFFSET
-
-    billboard.ResetOnSpawn = false
-
-    billboard.ZIndexBehavior =
-        Enum.ZIndexBehavior.Sibling
-
-    billboard.Parent = head
-
-    -- ========================================================
-    -- CONTAINER
-    -- ========================================================
-
-    local container = Instance.new(
-        "Frame"
-    )
-
-    container.Name =
-        "BubbleContainer"
-
-    container.Size =
-        UDim2.new(1, 0, 1, 0)
-
-    container.BackgroundTransparency = 1
-
-    container.BorderSizePixel = 0
-
-    container.ClipsDescendants = false
-
-    container.Parent = billboard
-
-    -- ========================================================
-    -- STACK LAYOUT
-    -- ========================================================
-
-    local layout = Instance.new(
-        "UIListLayout"
-    )
-
-    layout.Name =
-        "BubbleLayout"
-
-    layout.FillDirection =
-        Enum.FillDirection.Vertical
-
-    layout.HorizontalAlignment =
-        Enum.HorizontalAlignment.Center
-
-    layout.VerticalAlignment =
-        Enum.VerticalAlignment.Bottom
-
-    layout.SortOrder =
-        Enum.SortOrder.LayoutOrder
-
-    layout.Padding =
-        UDim.new(0, 4)
-
-    layout.Parent = container
-
-    state.Gui = billboard
-    state.Container = container
-
-    BubbleState[player] = state
-
-    return state
+-- Map Uppercase
+for i = 27, 52 do
+    local src = string.sub(standardChars, i, i)
+    local idx = i - 26
+    local target = string.sub(capsChars, (idx-1)*3 + 1, idx*3)
+    fontMap[src] = target
 end
 
--- ============================================================
--- CREATE BUBBLE
--- ============================================================
-
-local function CreateBubble(
-    player,
-    messageText,
-    messageId
-)
-
-    local state =
-        GetOrCreateBubbleGui(player)
-
-    if not state then
-        return
-    end
-
-    -- ========================================================
-    -- MAX STACK LIMIT
-    -- ========================================================
-
-    while #state.Messages >=
-        MAX_BUBBLES_PER_PLAYER do
-
-        local oldest =
-            table.remove(
-                state.Messages,
-                1
-            )
-
-        if oldest
-            and oldest.Bubble
-            and oldest.Bubble.Parent then
-
-            oldest.Bubble:Destroy()
-
+local function ConvertToCustomFont(str)
+    if not str then return "" end
+    local converted = ""
+    for i = 1, #str do
+        local char = string.sub(str, i, i)
+        if fontMap[char] then
+            converted = converted .. fontMap[char]
+        else
+            converted = converted .. char
         end
     end
-
-    -- ========================================================
-    -- MAIN BUBBLE
-    -- ========================================================
-
-    local bubble = Instance.new(
-        "Frame"
-    )
-
-    bubble.Name =
-        "ServerChatBubble"
-
-    bubble.AutomaticSize =
-        Enum.AutomaticSize.Y
-
-    bubble.Size =
-        UDim2.new(
-            1,
-            -18,
-            0,
-            0
-        )
-
-    bubble.BackgroundColor3 =
-        Color3.fromRGB(
-            12,
-            12,
-            16
-        )
-
-    bubble.BackgroundTransparency =
-        0.18
-
-    bubble.BorderSizePixel = 0
-
-    bubble.ClipsDescendants = false
-
-    bubble.LayoutOrder =
-        math.floor(
-            os.clock() * 1000000
-        )
-
-    bubble.Parent =
-        state.Container
-
-    -- ========================================================
-    -- ROUNDED CORNERS
-    -- ========================================================
-
-    local corner = Instance.new(
-        "UICorner"
-    )
-
-    corner.CornerRadius =
-        UDim.new(0, 14)
-
-    corner.Parent = bubble
-
-    -- ========================================================
-    -- GLASS GRADIENT
-    -- ========================================================
-
-    local glassGradient =
-        Instance.new("UIGradient")
-
-    glassGradient.Color =
-        ColorSequence.new({
-
-            ColorSequenceKeypoint.new(
-                0,
-                Color3.fromRGB(
-                    42,
-                    42,
-                    48
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                0.5,
-                Color3.fromRGB(
-                    17,
-                    17,
-                    22
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                1,
-                Color3.fromRGB(
-                    7,
-                    7,
-                    10
-                )
-            )
-
-        })
-
-    glassGradient.Transparency =
-        NumberSequence.new({
-
-            NumberSequenceKeypoint.new(
-                0,
-                0.05
-            ),
-
-            NumberSequenceKeypoint.new(
-                0.5,
-                0.18
-            ),
-
-            NumberSequenceKeypoint.new(
-                1,
-                0.08
-            )
-
-        })
-
-    glassGradient.Parent =
-        bubble
-
-    -- ========================================================
-    -- MAIN RED / BLACK BORDER
-    -- ========================================================
-
-    local stroke =
-        Instance.new("UIStroke")
-
-    stroke.Name =
-        "AnimatedRedBlackBorder"
-
-    stroke.Thickness = 2
-
-    stroke.ApplyStrokeMode =
-        Enum.ApplyStrokeMode.Border
-
-    stroke.Transparency = 0
-
-    stroke.Parent = bubble
-
-    local borderGradient =
-        Instance.new("UIGradient")
-
-    borderGradient.Color =
-        ColorSequence.new({
-
-            ColorSequenceKeypoint.new(
-                0,
-                Color3.fromRGB(
-                    255,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                0.25,
-                Color3.fromRGB(
-                    130,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                0.5,
-                Color3.fromRGB(
-                    0,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                0.75,
-                Color3.fromRGB(
-                    130,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                1,
-                Color3.fromRGB(
-                    255,
-                    0,
-                    0
-                )
-            )
-
-        })
-
-    borderGradient.Parent =
-        stroke
-
-    -- ========================================================
-    -- GLOW BORDER
-    -- ========================================================
-
-    local glowStroke =
-        Instance.new("UIStroke")
-
-    glowStroke.Name =
-        "RedGlow"
-
-    glowStroke.Thickness = 5
-
-    glowStroke.Transparency = 0.72
-
-    glowStroke.ApplyStrokeMode =
-        Enum.ApplyStrokeMode.Border
-
-    glowStroke.Parent = bubble
-
-    local glowGradient =
-        Instance.new("UIGradient")
-
-    glowGradient.Color =
-        ColorSequence.new({
-
-            ColorSequenceKeypoint.new(
-                0,
-                Color3.fromRGB(
-                    255,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                0.5,
-                Color3.fromRGB(
-                    20,
-                    0,
-                    0
-                )
-            ),
-
-            ColorSequenceKeypoint.new(
-                1,
-                Color3.fromRGB(
-                    255,
-                    0,
-                    0
-                )
-            )
-
-        })
-
-    glowGradient.Parent =
-        glowStroke
-
-    -- ========================================================
-    -- PADDING
-    -- ========================================================
-
-    local padding =
-        Instance.new("UIPadding")
-
-    padding.PaddingLeft =
-        UDim.new(0, 13)
-
-    padding.PaddingRight =
-        UDim.new(0, 13)
-
-    padding.PaddingTop =
-        UDim.new(0, 8)
-
-    padding.PaddingBottom =
-        UDim.new(0, 8)
-
-    padding.Parent = bubble
-
-    -- ========================================================
-    -- MESSAGE TEXT
-    -- ========================================================
-
-    local label =
-        Instance.new("TextLabel")
-
-    label.Name =
-        "MessageText"
-
-    label.Size =
-        UDim2.new(
-            1,
-            0,
-            0,
-            0
-        )
-
-    label.AutomaticSize =
-        Enum.AutomaticSize.Y
-
-    label.BackgroundTransparency = 1
-
-    label.BorderSizePixel = 0
-
-    label.Text =
-        StylizeText(messageText)
-
-    label.TextColor3 =
-        Color3.fromRGB(
-            255,
-            255,
-            255
-        )
-
-    label.TextTransparency = 0
-
-    label.Font =
-        Enum.Font.GothamMedium
-
-    label.TextSize = 16
-
-    label.TextWrapped = true
-
-    label.TextXAlignment =
-        Enum.TextXAlignment.Center
-
-    label.TextYAlignment =
-        Enum.TextYAlignment.Center
-
-    label.RichText = false
-
-    label.Parent = bubble
-
-    -- ========================================================
-    -- GLASS HIGHLIGHT
-    -- ========================================================
-
-    local highlight =
-        Instance.new("Frame")
-
-    highlight.Name =
-        "GlassHighlight"
-
-    highlight.Size =
-        UDim2.new(
-            1,
-            -20,
-            0,
-            1
-        )
-
-    highlight.Position =
-        UDim2.new(
-            0,
-            10,
-            0,
-            5
-        )
-
-    highlight.BackgroundColor3 =
-        Color3.fromRGB(
-            255,
-            255,
-            255
-        )
-
-    highlight.BackgroundTransparency =
-        0.82
-
-    highlight.BorderSizePixel = 0
-
-    highlight.ZIndex = 2
-
-    highlight.Parent = bubble
-
-    local highlightCorner =
-        Instance.new("UICorner")
-
-    highlightCorner.CornerRadius =
-        UDim.new(1, 0)
-
-    highlightCorner.Parent =
-        highlight
-
-    -- ========================================================
-    -- CHAT TAIL
-    -- ========================================================
-
-    local tail =
-        Instance.new("Frame")
-
-    tail.Name =
-        "ChatTail"
-
-    tail.Size =
-        UDim2.new(
-            0,
-            12,
-            0,
-            12
-        )
-
-    tail.Position =
-        UDim2.new(
-            0.5,
-            -6,
-            1,
-            -2
-        )
-
-    tail.BackgroundColor3 =
-        Color3.fromRGB(
-            12,
-            12,
-            16
-        )
-
-    tail.BackgroundTransparency =
-        0.18
-
-    tail.BorderSizePixel = 0
-
-    tail.Rotation = 45
-
-    tail.ZIndex = 0
-
-    tail.Parent = bubble
-
-    -- ========================================================
-    -- BORDER ANIMATION
-    -- ========================================================
-
-    local animationAlive = true
-
-    task.spawn(function()
-
-        local rotation = 0
-
-        while animationAlive
-            and bubble.Parent
-            and stroke.Parent do
-
-            rotation =
-                (rotation + 2.4) % 360
-
-            borderGradient.Rotation =
-                rotation
-
-            glowGradient.Rotation =
-                rotation
-
-            task.wait(0.03)
+    return converted
+end
+
+-- ============================================================================
+-- OVERHEAD BUBBLE MANAGER
+-- ============================================================================
+local PlayerBubbles = {} -- Stores active BillboardGuis for each player
+
+local function GetCharacterHead(player)
+    if not player or not player.Character then return nil end
+    return player.Character:FindFirstChild("Head") or player.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function CreateBubbleUI(player, rawText)
+    local head = GetCharacterHead(player)
+    if not head then return end
+
+    -- Initialize stack for player if missing
+    if not PlayerBubbles[player] then
+        PlayerBubbles[player] = {}
+    end
+
+    -- Create BillboardGui
+    local bbGui = Instance.new("BillboardGui")
+    bbGui.Name = "KronosGlassBubble"
+    bbGui.Adornee = head
+    bbGui.Size = UDim2.new(0, 200, 0, 50)
+    bbGui.StudsOffset = Vector3.new(0, 2.5, 0)
+    bbGui.AlwaysOnTop = true
+    bbGui.ResetOnSpawn = false
+
+    -- Glassmorphic Main Frame
+    local bubbleFrame = Instance.new("Frame")
+    bubbleFrame.Name = "BubbleFrame"
+    bubbleFrame.Size = UDim2.new(1, 0, 1, 0)
+    bubbleFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    bubbleFrame.BackgroundTransparency = 0.35 -- Glass Effect
+    bubbleFrame.BorderSizePixel = 0
+    bubbleFrame.Parent = bbGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = bubbleFrame
+
+    -- Glass Gloss Overlay
+    local gloss = Instance.new("Frame")
+    gloss.Size = UDim2.new(1, 0, 0.45, 0)
+    gloss.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    gloss.BackgroundTransparency = 0.92
+    gloss.BorderSizePixel = 0
+    gloss.Parent = bubbleFrame
+
+    local glossCorner = Instance.new("UICorner")
+    glossCorner.CornerRadius = UDim.new(0, 12)
+    glossCorner.Parent = gloss
+
+    -- Transitioning Red-to-Black Loop Border
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 2.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Transparency = 0.1
+    stroke.Parent = bubbleFrame
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+    })
+    gradient.Parent = stroke
+
+    -- Rotate border gradient indefinitely
+    local borderConn
+    borderConn = RunService.RenderStepped:Connect(function(dt)
+        if not stroke or not stroke.Parent then
+            if borderConn then borderConn:Disconnect() end
+            return
         end
+        gradient.Rotation = (gradient.Rotation + (120 * dt)) % 360
     end)
 
-    -- ========================================================
-    -- REGISTER BUBBLE
-    -- ========================================================
+    -- Message Text (Using Custom Font)
+    local msgLabel = Instance.new("TextLabel")
+    msgLabel.Size = UDim2.new(1, -16, 1, -12)
+    msgLabel.Position = UDim2.new(0, 8, 0, 6)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.Font = Enum.Font.SourceSansBold
+    msgLabel.Text = ConvertToCustomFont(rawText)
+    msgLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    msgLabel.TextSize = 14
+    msgLabel.TextWrapped = true
+    msgLabel.TextScaled = false
+    msgLabel.Parent = bubbleFrame
 
-    local entry = {
+    -- Pointer Tip (Speech Bubble Bottom Pointer)
+    local pointer = Instance.new("Frame")
+    pointer.Size = UDim2.new(0, 10, 0, 10)
+    pointer.Position = UDim2.new(0.5, -5, 1, -4)
+    pointer.Rotation = 45
+    pointer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    pointer.BackgroundTransparency = 0.35
+    pointer.BorderSizePixel = 0
+    pointer.ZIndex = 0
+    pointer.Parent = bubbleFrame
 
-        Id = tostring(messageId),
+    -- Dynamic Resizing Based on Text Length
+    local textBounds = msgLabel.TextBounds
+    local newWidth = math.clamp(textBounds.X + 24, 80, 260)
+    local newHeight = math.clamp(textBounds.Y + 18, 40, 120)
+    bbGui.Size = UDim2.new(0, newWidth, 0, newHeight)
 
-        Bubble = bubble,
+    -- Attach UI to local PlayerGui
+    bbGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-        Created = tick()
+    -- Move existing bubbles up (Native Chat Mechanics)
+    local stack = PlayerBubbles[player]
+    for _, item in ipairs(stack) do
+        if item.Gui and item.Gui.Parent then
+            local currentOffset = item.Gui.StudsOffset
+            TweenService:Create(item.Gui, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                StudsOffset = currentOffset + Vector3.new(0, (newHeight / 20) + 0.4, 0)
+            }):Play()
+        end
+    end
 
-    }
+    local bubbleData = { Gui = bbGui, Stroke = stroke, Label = msgLabel, Frame = bubbleFrame, Gloss = gloss, Pointer = pointer }
+    table.insert(stack, bubbleData)
 
-    table.insert(
-        state.Messages,
-        entry
-    )
+    -- Fade and Disappear after 7 seconds
+    task.delay(7, function()
+        if bbGui and bbGui.Parent then
+            local fadeInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(bubbleFrame, fadeInfo, { BackgroundTransparency = 1 }):Play()
+            TweenService:Create(gloss, fadeInfo, { BackgroundTransparency = 1 }):Play()
+            TweenService:Create(pointer, fadeInfo, { BackgroundTransparency = 1 }):Play()
+            TweenService:Create(msgLabel, fadeInfo, { TextTransparency = 1 }):Play()
+            local strokeFade = TweenService:Create(stroke, fadeInfo, { Transparency = 1 })
+            strokeFade:Play()
 
-    -- ========================================================
-    -- POP-IN
-    -- ========================================================
+            strokeFade.Completed:Wait()
+            bbGui:Destroy()
 
-    bubble.BackgroundTransparency = 1
-
-    stroke.Transparency = 1
-
-    glowStroke.Transparency = 1
-
-    label.TextTransparency = 1
-
-    bubble.Size =
-        UDim2.new(
-            1,
-            -28,
-            0,
-            0
-        )
-
-    TweenService:Create(
-
-        bubble,
-
-        TweenInfo.new(
-            0.22,
-            Enum.EasingStyle.Back,
-            Enum.EasingDirection.Out
-        ),
-
-        {
-            BackgroundTransparency = 0.18,
-
-            Size =
-                UDim2.new(
-                    1,
-                    -18,
-                    0,
-                    0
-                )
-        }
-
-    ):Play()
-
-    TweenService:Create(
-
-        stroke,
-
-        TweenInfo.new(0.22),
-
-        {
-            Transparency = 0
-        }
-
-    ):Play()
-
-    TweenService:Create(
-
-        glowStroke,
-
-        TweenInfo.new(0.22),
-
-        {
-            Transparency = 0.72
-        }
-
-    ):Play()
-
-    TweenService:Create(
-
-        label,
-
-        TweenInfo.new(0.22),
-
-        {
-            TextTransparency = 0
-        }
-
-    ):Play()
-
-    -- ========================================================
-    -- 7 SECOND TIMER
-    -- ========================================================
-
-    task.delay(
-        BUBBLE_LIFETIME,
-        function()
-
-            if not bubble
-                or not bubble.Parent then
-
-                return
+            -- Cleanup from stack
+            for idx, item in ipairs(stack) do
+                if item.Gui == bbGui then
+                    table.remove(stack, idx)
+                    break
+                end
             end
+        end
+    end)
+end
 
-            animationAlive = false
+-- ============================================================================
+-- REAL-TIME CHAT POLLER
+-- ============================================================================
+local ProcessedMessageIds = {}
+local ListenStartTime = os.time()
 
-            local fadeInfo =
-                TweenInfo.new(
-                    FADE_TIME,
-                    Enum.EasingStyle.Quad,
-                    Enum.EasingDirection.Out
-                )
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local serverData = HttpRequest(SERVER_MESSAGES_ENDPOINT, "GET")
+        if serverData and type(serverData) == "table" then
+            for msgId, msgObj in pairs(serverData) do
+                if type(msgObj) == "table" and not ProcessedMessageIds[msgId] then
+                    ProcessedMessageIds[msgId] = true
 
-            TweenService:Create(
+                    local msgTime = msgObj.Timestamp or 0
+                    local senderName = msgObj.Username
+                    local rawText = msgObj.Text
 
-                bubble,
-
-                fadeInfo,
-
-                {
-                    BackgroundTransparency = 1
-                }
-
-            ):Play()
-
-            TweenService:Create(
-
-                stroke,
-
-                fadeInfo,
-
-                {
-                    Transparency = 1
-                }
-
-            ):Play()
-
-            TweenService:Create(
-
-                glowStroke,
-
-                fadeInfo,
-
-                {
-                    Transparency = 1
-                }
-
-            ):Play()
-
-            TweenService:Create(
-
-                label,
-
-                fadeInfo,
-
-                {
-                    TextTransparency = 1
-                }
-
-            ):Play()
-
-            TweenService:Create(
-
-                highlight,
-
-                fadeInfo,
-
-                {
-                    BackgroundTransparency = 1
-                }
-
-            ):Play()
-
-            task.wait(FADE_TIME)
-
-            if bubble
-                and bubble.Parent then
-
-                bubble:Destroy()
-
-            end
-
-            local currentState =
-                BubbleState[player]
-
-            if currentState then
-
-                for i =
-                    #currentState.Messages,
-                    1,
-                    -1 do
-
-                    if currentState.Messages[i].Bubble
-                        == bubble then
-
-                        table.remove(
-                            currentState.Messages,
-                            i
-                        )
-
-                        break
+                    -- Process if message is recent and not a join notification
+                    if msgTime >= ListenStartTime and senderName and rawText and not msgObj.IsJoinMessage then
+                        -- Check if player is present in current server
+                        local targetPlayer = Players:FindFirstChild(senderName)
+                        if targetPlayer and targetPlayer ~= LocalPlayer then
+                            -- Ignore raw sticker links
+                            if string.sub(rawText, 1, 11) ~= "rbxthumb://" and string.sub(rawText, 1, 13) ~= "rbxassetid://" then
+                                CreateBubbleUI(targetPlayer, rawText)
+                            end
+                        end
                     end
                 end
             end
         end
-    )
-end
-
--- ============================================================
--- MESSAGE FILTER
--- ============================================================
-
-local function ShouldDisplayMessage(msg)
-
-    if type(msg) ~= "table" then
-        return false
-    end
-
-    -- Must contain actual text.
-    if not msg.Text
-        or tostring(msg.Text) == "" then
-
-        return false
-    end
-
-    -- Private messages are not server chat.
-    if msg.IsPrivate then
-        return false
-    end
-
-    -- Ignore system messages.
-    if msg.SystemMessage then
-        return false
-    end
-
-    -- Ignore join announcements.
-    if msg.IsJoinMessage then
-        return false
-    end
-
-    -- Must contain sender.
-    if not msg.Username
-        or tostring(msg.Username) == "" then
-
-        return false
-    end
-
-    -- IMPORTANT:
-    -- There is NO local-player exclusion here.
-    --
-    -- Your messages are intentionally allowed.
-    --
-    -- Example:
-    --
-    -- if msg.Username == LocalPlayer.Name then
-    --     return false
-    -- end
-    --
-    -- That check has deliberately been removed.
-
-    return true
-end
-
--- ============================================================
--- FIND PLAYER IN CURRENT SERVER
--- ============================================================
-
-local function FindServerPlayer(msg)
-
-    if not msg then
-        return nil
-    end
-
-    -- ========================================================
-    -- USERNAME MATCH
-    -- ========================================================
-
-    if msg.Username then
-
-        local player =
-            Players:FindFirstChild(
-                tostring(msg.Username)
-            )
-
-        if player then
-            return player
-        end
-    end
-
-    -- ========================================================
-    -- USER ID FALLBACK
-    -- ========================================================
-
-    if msg.UserId then
-
-        local numericId =
-            tonumber(msg.UserId)
-
-        if numericId then
-
-            for _, player
-                in ipairs(
-                    Players:GetPlayers()
-                ) do
-
-                if player.UserId ==
-                    numericId then
-
-                    return player
-                end
-            end
-        end
-    end
-
-    return nil
-end
-
--- ============================================================
--- MESSAGE ID
--- ============================================================
-
-local function GetMessageId(
-    firebaseId,
-    msg
-)
-
-    if firebaseId then
-
-        return tostring(
-            firebaseId
-        )
-    end
-
-    if msg.ClientMessageId then
-
-        return "client_"
-            .. tostring(
-                msg.ClientMessageId
-            )
-    end
-
-    return table.concat({
-
-        tostring(
-            msg.Username or ""
-        ),
-
-        tostring(
-            msg.Timestamp or ""
-        ),
-
-        tostring(
-            msg.Text or ""
-        )
-
-    }, "_")
-end
-
--- ============================================================
--- PROCESS MESSAGE
--- ============================================================
-
-local function ProcessServerMessage(
-    firebaseId,
-    msg
-)
-
-    if not ShouldDisplayMessage(msg) then
-        return
-    end
-
-    local messageId =
-        GetMessageId(
-            firebaseId,
-            msg
-        )
-
-    -- Already displayed.
-    if ProcessedMessages[messageId] then
-        return
-    end
-
-    -- Mark immediately.
-    ProcessedMessages[messageId] = true
-
-    -- Find sender in CURRENT Roblox server.
-    local player =
-        FindServerPlayer(msg)
-
-    -- Firebase can contain stale messages
-    -- from users no longer in this server.
-    if not player then
-        return
-    end
-
-    -- Your own message is allowed.
-    -- There is intentionally NO:
-    --
-    -- if player == LocalPlayer then return end
-
-    CreateBubble(
-
-        player,
-
-        tostring(
-            msg.Text
-        ),
-
-        messageId
-
-    )
-end
-
--- ============================================================
--- PLAYER SETUP
--- ============================================================
-
-local function SetupPlayer(player)
-
-    -- IMPORTANT:
-    -- LocalPlayer is NOT skipped.
-    --
-    -- This means the addon also prepares
-    -- the local player's bubble system.
-
-    player.CharacterAdded:Connect(
-        function(character)
-
-            task.wait(0.5)
-
-            local state =
-                BubbleState[player]
-
-            if state
-                and state.Gui then
-
-                local head =
-                    character:FindFirstChild(
-                        "Head"
-                    )
-
-                if head then
-
-                    state.Gui.Adornee =
-                        head
-
-                    state.Gui.Parent =
-                        head
-
-                end
-            end
-        end
-    )
-
-    player.CharacterRemoving:Connect(
-        function()
-
-            local state =
-                BubbleState[player]
-
-            if state then
-
-                if state.Gui
-                    and state.Gui.Parent then
-
-                    state.Gui:Destroy()
-
-                end
-
-                BubbleState[player] = nil
-            end
-        end
-    )
-end
-
--- ============================================================
--- INITIAL PLAYERS
--- ============================================================
-
-for _, player
-    in ipairs(
-        Players:GetPlayers()
-    ) do
-
-    SetupPlayer(player)
-end
-
--- ============================================================
--- NEW PLAYERS
--- ============================================================
-
-Players.PlayerAdded:Connect(
-    SetupPlayer
-)
-
--- ============================================================
--- PLAYER REMOVAL
--- ============================================================
-
-Players.PlayerRemoving:Connect(
-    function(player)
-
-        local state =
-            BubbleState[player]
-
-        if state then
-
-            if state.Gui
-                and state.Gui.Parent then
-
-                state.Gui:Destroy()
-
-            end
-        end
-
-        BubbleState[player] = nil
-    end
-)
-
--- ============================================================
--- SERVER CHAT POLLING
--- ============================================================
-
-local Polling = true
-
-task.spawn(function()
-
-    -- Small startup delay.
-    task.wait(0.5)
-
-    while Polling do
-
-        local serverData =
-            HttpRequest(
-                SERVER_MESSAGES_ENDPOINT,
-                "GET"
-            )
-
-        if serverData
-            and type(serverData) == "table" then
-
-            for firebaseId, msg
-                in pairs(serverData) do
-
-                if type(msg) == "table" then
-
-                    ProcessServerMessage(
-                        firebaseId,
-                        msg
-                    )
-
-                end
-            end
-        end
-
-        task.wait(
-            POLL_INTERVAL
-        )
     end
 end)
-
--- ============================================================
--- KEEP BILLBOARDS ATTACHED
--- ============================================================
-
-task.spawn(function()
-
-    while true do
-
-        task.wait(0.5)
-
-        for player, state
-            in pairs(BubbleState) do
-
-            if player
-                and player.Parent == Players
-                and state
-                and state.Gui then
-
-                local head =
-                    GetCharacterRoot(player)
-
-                if head
-                    and state.Gui.Parent
-                        ~= head then
-
-                    state.Gui.Adornee =
-                        head
-
-                    state.Gui.Parent =
-                        head
-
-                end
-            end
-        end
-    end
-end)
-
--- ============================================================
--- PROCESSED MESSAGE MEMORY CLEANUP
--- ============================================================
-
-task.spawn(function()
-
-    while true do
-
-        task.wait(60)
-
-        local count = 0
-
-        for _ in pairs(
-            ProcessedMessages
-        ) do
-
-            count = count + 1
-        end
-
-        -- Prevent unlimited growth.
-        if count > 1000 then
-
-            ProcessedMessages = {}
-
-        end
-    end
-end)
-
--- ============================================================
--- LOADED
--- ============================================================
-
-print(
-    "[Kronos Server Chat Bubbles] Loaded."
-)
-
-print(
-    "[Kronos Server Chat Bubbles] Own messages: ENABLED"
-)
-
-print(
-    "[Kronos Server Chat Bubbles] Lifetime: "
-        .. tostring(
-            BUBBLE_LIFETIME
-        )
-        .. " seconds"
-)
