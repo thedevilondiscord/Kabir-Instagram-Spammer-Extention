@@ -5,7 +5,9 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local SERVER_JOB_ID = game.JobId ~= "" and game.JobId or "Studio_Local_Server"
+
+-- Fix Studio JobId mismatch vs Live Game JobId
+local SERVER_JOB_ID = (game.JobId and game.JobId ~= "") and game.JobId or "Studio_Local_Server"
 local KRONOS_FIREBASE_URL = "https://gcserverchat-default-rtdb.asia-southeast1.firebasedatabase.app/"
 local KRONOS_MESSAGES_ENDPOINT = KRONOS_FIREBASE_URL .. "server_chat/" .. SERVER_JOB_ID .. ".json"
 
@@ -13,7 +15,10 @@ local KRONOS_MESSAGES_ENDPOINT = KRONOS_FIREBASE_URL .. "server_chat/" .. SERVER
 local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
-    if not http_req then return nil end
+    if not http_req then 
+        warn("[Kronos Bubble Addon] No valid HTTP request function found in executor!")
+        return nil 
+    end
     local success, response = pcall(function()
         return http_req({
             Url = url,
@@ -31,6 +36,66 @@ local function HttpRequest(url, method, data)
     end
     return nil
 end
+
+-- ============================================================================
+-- 5-SECOND LOADED NOTIFICATION GUI
+-- ============================================================================
+local function ShowLoadedNotification()
+    local pGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    local notifGui = Instance.new("ScreenGui")
+    notifGui.Name = "KronosAddonNotifGui"
+    notifGui.ResetOnSpawn = false
+    notifGui.Parent = pGui
+
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Size = UDim2.new(0, 240, 0, 42)
+    -- Start offscreen to the right for a smooth slide-in
+    notifFrame.Position = UDim2.new(1, 260, 0, 20)
+    notifFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    notifFrame.BackgroundTransparency = 0.25
+    notifFrame.BorderSizePixel = 0
+    notifFrame.Parent = notifGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = notifFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1.5
+    stroke.Color = Color3.fromRGB(255, 30, 30)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = notifFrame
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -16, 1, 0)
+    textLabel.Position = UDim2.new(0, 8, 0, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Text = "⚡ Chat Bubble Addon Loaded!"
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextSize = 14
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = notifFrame
+
+    -- Animate In (Slide Left)
+    local tweenInfoIn = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    TweenService:Create(notifFrame, tweenInfoIn, { Position = UDim2.new(1, -250, 0, 20) }):Play()
+
+    -- Auto Dismiss After 5 Seconds
+    task.delay(5, function()
+        if notifFrame and notifFrame.Parent then
+            local tweenInfoOut = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            local fadeOut = TweenService:Create(notifFrame, tweenInfoOut, { Position = UDim2.new(1, 260, 0, 20) })
+            fadeOut:Play()
+            fadeOut.Completed:Wait()
+            notifGui:Destroy()
+        end
+    end)
+end
+
+-- Trigger Notification
+task.spawn(ShowLoadedNotification)
 
 -- ============================================================================
 -- CUSTOM MATHEMATICAL FONT MAPPER
@@ -219,7 +284,7 @@ end
 -- KRONOS REALTIME LISTENER
 -- ============================================================================
 local ProcessedMessageIds = {}
-local ListenStartTime = os.time()
+local ListenStartTime = os.time() - 10 
 
 task.spawn(function()
     while true do
