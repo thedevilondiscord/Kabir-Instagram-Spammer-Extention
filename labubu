@@ -35,19 +35,32 @@ local LastMessageSendTime = 0
 local PFP_SAVE_KEY = "Kronos_UserPFP_AssetId"
 local DefaultPfpId = "110388265928893"
 
-local CurrentPfpId = (function()
-    if readfile and isfile and isfile(PFP_SAVE_KEY .. ".txt") then
-        local success, saved = pcall(function() return readfile(PFP_SAVE_KEY .. ".txt") end)
-        if success and saved and saved ~= "" then return saved end
+local function SafeIsFile(path)
+    if type(isfile) ~= "function" then return false end
+    local ok, result = pcall(isfile, path)
+    return ok and result == true
+end
+
+local function SafeReadFile(path)
+    if type(readfile) ~= "function" or not SafeIsFile(path) then return nil end
+    local ok, result = pcall(readfile, path)
+    if ok and type(result) == "string" and result ~= "" then
+        return result
     end
-    return DefaultPfpId
-end)()
+    return nil
+end
+
+local function SafeWriteFile(path, data)
+    if type(writefile) ~= "function" then return false end
+    local ok = pcall(writefile, path, tostring(data or ""))
+    return ok
+end
+
+local CurrentPfpId = SafeReadFile(PFP_SAVE_KEY .. ".txt") or DefaultPfpId
 
 local function SavePfpIdLocally(assetId)
     CurrentPfpId = tostring(assetId)
-    if writefile then
-        pcall(function() writefile(PFP_SAVE_KEY .. ".txt", CurrentPfpId) end)
-    end
+    SafeWriteFile(PFP_SAVE_KEY .. ".txt", CurrentPfpId)
 end
 
 local BoyPfpList = {
@@ -1011,7 +1024,7 @@ end
 -- ============================================================================
 -- HTTP HANDLER (MULTI-EXECUTOR COMPATIBLE)
 -- ============================================================================
-local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
+local http_req = request or (syn and syn.request) or (http and http.request) or HttpAndRpcRequest
 
 local function HttpRequest(url, method, data)
     if not http_req then return nil end
