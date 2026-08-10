@@ -1136,103 +1136,6 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.Enabled = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Sticker preview popup: used when a sticker already displayed in chat is clicked.
-local ActiveStickerPreview = nil
-
-local function ShowStickerPreview(stickerUrl)
-    if ActiveStickerPreview and ActiveStickerPreview.Parent then
-        ActiveStickerPreview:Destroy()
-        ActiveStickerPreview = nil
-    end
-
-    local popup = Instance.new("Frame")
-    popup.Name = "StickerPreviewPopup"
-    popup.Size = UDim2.new(0, 340, 0, 370)
-    popup.AnchorPoint = Vector2.new(0.5, 0.5)
-    popup.Position = UDim2.new(0.5, 0, 0.5, 0)
-    popup.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
-    popup.BackgroundTransparency = 0.08
-    popup.BorderSizePixel = 0
-    popup.ZIndex = 500
-    popup.Parent = ScreenGui
-    ActiveStickerPreview = popup
-
-    local popupCorner = Instance.new("UICorner")
-    popupCorner.CornerRadius = UDim.new(0, 14)
-    popupCorner.Parent = popup
-
-    local popupStroke = Instance.new("UIStroke")
-    popupStroke.Thickness = 2
-    popupStroke.Color = Color3.fromRGB(220, 30, 30)
-    popupStroke.Transparency = 0.15
-    popupStroke.Parent = popup
-
-    local popupTitle = Instance.new("TextLabel")
-    popupTitle.Name = "StickerPreviewTitle"
-    popupTitle.Size = UDim2.new(1, -60, 0, 28)
-    popupTitle.Position = UDim2.new(0, 15, 0, 8)
-    popupTitle.BackgroundTransparency = 1
-    popupTitle.Text = "STICKER PREVIEW"
-    popupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    popupTitle.Font = Enum.Font.GothamBold
-    popupTitle.TextSize = 12
-    popupTitle.TextXAlignment = Enum.TextXAlignment.Left
-    popupTitle.ZIndex = 501
-    popupTitle.Parent = popup
-
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseStickerPreview"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -38, 0, 7)
-    closeButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-    closeButton.BackgroundTransparency = 0.1
-    closeButton.BorderSizePixel = 0
-    closeButton.Text = "X"
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextSize = 14
-    closeButton.AutoButtonColor = true
-    closeButton.ZIndex = 502
-    closeButton.Parent = popup
-
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 8)
-    closeCorner.Parent = closeButton
-
-    local previewImage = Instance.new("ImageLabel")
-    previewImage.Name = "StickerPreviewImage"
-    previewImage.Size = UDim2.new(0, 285, 0, 285)
-    previewImage.Position = UDim2.new(0.5, -142, 0, 48)
-    previewImage.BackgroundColor3 = Color3.fromRGB(25, 25, 38)
-    previewImage.BackgroundTransparency = 0.15
-    previewImage.BorderSizePixel = 0
-    previewImage.Image = stickerUrl
-    previewImage.ScaleType = Enum.ScaleType.Fit
-    previewImage.ZIndex = 501
-    previewImage.Parent = popup
-
-    local previewCorner = Instance.new("UICorner")
-    previewCorner.CornerRadius = UDim.new(0, 10)
-    previewCorner.Parent = previewImage
-
-    local previewStroke = Instance.new("UIStroke")
-    previewStroke.Thickness = 1
-    previewStroke.Color = Color3.fromRGB(255, 255, 255)
-    previewStroke.Transparency = 0.8
-    previewStroke.Parent = previewImage
-
-    local function closePreview()
-        if popup and popup.Parent then
-            popup:Destroy()
-        end
-        if ActiveStickerPreview == popup then
-            ActiveStickerPreview = nil
-        end
-    end
-
-    closeButton.MouseButton1Click:Connect(closePreview)
-end
-
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 450, 0, 320)
@@ -2915,49 +2818,14 @@ CreateMessageCard = function(msgData, isGlobal)
         pad.PaddingBottom = UDim.new(0, 8)
         pad.Parent = frame
     elseif isSticker then
-        local stickerImg = Instance.new("ImageButton")
+        local stickerImg = Instance.new("ImageLabel")
         stickerImg.Name = "StickerMsg"
         stickerImg.Size = UDim2.new(0, 80, 0, 80)
         stickerImg.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 60 or 26)
         stickerImg.BackgroundTransparency = 1
         stickerImg.Image = msgData.Text
         stickerImg.ScaleType = Enum.ScaleType.Fit
-        stickerImg.AutoButtonColor = false
-        stickerImg.ZIndex = 11
         stickerImg.Parent = frame
-
-        -- Short click opens the larger sticker preview.
-        -- Long press still opens the normal message context menu.
-        local stickerPressToken = 0
-        local stickerLongPressed = false
-
-        stickerImg.InputBegan:Connect(function(input)
-            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-            stickerPressToken = stickerPressToken + 1
-            local token = stickerPressToken
-            stickerLongPressed = false
-
-            task.delay(0.65, function()
-                if token ~= stickerPressToken or not stickerImg.Parent then return end
-                stickerLongPressed = true
-                ShowMessageContextMenu(msgData, input.Position)
-            end)
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    stickerPressToken = stickerPressToken + 1
-                end
-            end)
-        end)
-
-        stickerImg.MouseButton1Click:Connect(function()
-            if stickerLongPressed then
-                stickerLongPressed = false
-                return
-            end
-            ShowStickerPreview(msgData.Text)
-        end)
 
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 8)
