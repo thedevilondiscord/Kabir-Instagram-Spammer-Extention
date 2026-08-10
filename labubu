@@ -456,10 +456,12 @@ end)
 -- ============================================================================
 local GLOBAL_FIREBASE_URL = "https://grimcouncilcommunicator-default-rtdb.asia-southeast1.firebasedatabase.app/"
 local GLOBAL_MESSAGES_ENDPOINT = GLOBAL_FIREBASE_URL .. "global_chat/messages.json"
-local GLOBAL_REACTIONS_ENDPOINT = GLOBAL_FIREBASE_URL .. "global_chat/reactions.json"
 
 local SERVER_FIREBASE_URL = "https://gcserverchat-default-rtdb.asia-southeast1.firebasedatabase.app/"
 local SERVER_MESSAGES_ENDPOINT = SERVER_FIREBASE_URL .. "server_chat/" .. SERVER_JOB_ID .. ".json"
+
+-- Reactions are stored separately so the existing message records remain untouched.
+local GLOBAL_REACTIONS_ENDPOINT = GLOBAL_FIREBASE_URL .. "global_chat/reactions.json"
 local SERVER_REACTIONS_ENDPOINT = SERVER_FIREBASE_URL .. "server_chat/" .. SERVER_JOB_ID .. "/reactions.json"
 
 local REQUEST_FIREBASE_URL = "https://gctagreq-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -941,11 +943,10 @@ local PersistentPvtPrefix = ""
 local GlobalCachedMessages, GlobalUIElements = {}, {}
 local ServerCachedMessages, ServerUIElements = {}, {}
 
--- Discord-style message reactions. Reactions are stored separately from the
--- message payload so adding/removing one never rewrites the original message.
-local REACTION_EMOJIS = {"❤️", "😂", "👍", "🔥", "😮", "😢", "🎉", "💀"}
-local ReactionCache = { GLOBAL = {}, SERVER = {} }
-local ReactionCards = { GLOBAL = {}, SERVER = {} }
+-- Message reaction state. Each message gets a stable ReactionKey and each
+-- emoji stores one Firebase entry per user, preventing duplicate reactions.
+local ReactionState = {}
+local ReactionCards = {}
 
 local function RefreshAllRoleAutocomplete()
     local optionsMap = { ["!tag"] = true, ["!role"] = true, ["!spoof"] = true, ["/w "] = true }
@@ -2419,6 +2420,213 @@ AutoCompleteLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(funct
     AutoCompleteFrame.CanvasSize = UDim2.new(0, 0, 0, AutoCompleteLayout.AbsoluteContentSize.Y + 6)
 end)
 
+-- ============================================================================
+-- MESSAGE REACTIONS
+-- ============================================================================
+local function GetReactionKey(msgData)
+    if not msgData then return nil end
+    return tostring(msgData.ReactionKey or msgData.ClientMessageId or "")
+end
+
+local function GetReactionEndpoint(isGlobal)
+    return isGlobal and GLOBAL_REACTIONS_ENDPOINT or SERVER_REACTIONS_ENDPOINT
+end
+
+local function EncodeReactionPath(value)
+    local ok, encoded = pcall(function()
+        return HttpService:UrlEncode(tostring(value or ""))
+    end)
+    return ok and encoded or tostring(value or "")
+end
+
+local function RebuildReactionState(reactionRoot)
+    if type(reactionRoot) ~= "table" then return {} end
+    local state = {}
+    for emoji, users in pairs(reactionRoot) do
+        if type(users) == "table" then
+            local count, mine = 0, false
+            for userId, active in pairs(users) do
+                if active then
+                    count = count + 1
+                    if tostring(userId) == tostring(LocalPlayer.UserId) then mine = true end
+                end
+            end
+            if count > 0 then state[tostring(emoji)] = {Count = count, Mine = mine} end
+        end
+    end
+    return state
+end
+
+local function RefreshReactionVisual(reactionKey)
+    local reactionBar = ReactionCards[reactionKey]
+    if not reactionBar or not reactionBar.Parent then return end
+    for _, child in ipairs(reactionBar:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local state = ReactionState[reactionKey] or {}
+    local hasAny = false
+    for emoji, info in pairs(state) do
+        if info.Count and info.Count > 0 then
+            hasAny = true
+            local reactionButton = Instance.new("TextButton")
+            reactionButton.Name = "Reaction_" .. tostring(emoji)
+            reactionButton.Size = UDim2.new(0, 0, 0, 24)
+            reactionButton.AutomaticSize = Enum.AutomaticSize.X
+            reactionButton.BackgroundColor3 = info.Mine and Color3.fromRGB(70, 35, 45) or Color3.fromRGB(30, 30, 42)
+            reactionButton.BackgroundTransparency = 0.05
+            reactionButton.BorderSizePixel = 0
+            reactionButton.Font = Enum.Font.GothamMedium
+            reactionButton.Text = tostring(emoji) .. " " .. tostring(info.Count)
+            reactionButton.TextColor3 = Color3.fromRGB(245, 245, 250)
+            reactionButton.TextSize = 12
+            reactionButton.AutoButtonColor = false
+            reactionButton.ZIndex = 13
+            reactionButton.Parent = reactionBar
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = reactionButton
+            local pad = Instance.new("UIPadding")
+            pad.PaddingLeft = UDim.new(0, 7)
+            pad.PaddingRight = UDim.new(0, 7)
+            pad.Parent = reactionButton
+            reactionButton.MouseButton1Click:Connect(function()
+                local currentState = ReactionState[reactionKey] or {}
+                local currentInfo = currentState[emoji]
+                local isMine = currentInfo and currentInfo.Mine
+                local reactionUrl = GetReactionEndpoint(reactionBar:GetAttribute("IsGlobal") == true) .. "/" .. EncodeReactionPath(reactionKey) .. "/" .. EncodeReactionPath(emoji) .. "/" .. tostring(LocalPlayer.UserId) .. ".json"
+                task.spawn(function()
+                    if isMine then HttpRequest(reactionUrl, "DELETE") else HttpRequest(reactionUrl, "PUT", true) end
+                end)
+                local newState = ReactionState[reactionKey] or {}
+                if isMine then
+                    if newState[emoji] then
+                        newState[emoji].Count = math.max(0, newState[emoji].Count - 1)
+                        newState[emoji].Mine = false
+                        if newState[emoji].Count <= 0 then newState[emoji] = nil end
+                    end
+                else
+                    newState[emoji] = newState[emoji] or {Count = 0, Mine = false}
+                    newState[emoji].Count = newState[emoji].Count + 1
+                    newState[emoji].Mine = true
+                end
+                ReactionState[reactionKey] = newState
+                RefreshReactionVisual(reactionKey)
+            end)
+        end
+    end
+    reactionBar.Visible = hasAny
+    local bottomPad = reactionBar.Parent and reactionBar.Parent:FindFirstChild("ReactionBottomPad")
+    if bottomPad and bottomPad:IsA("UIPadding") then
+        bottomPad.PaddingBottom = UDim.new(0, hasAny and 30 or 0)
+    end
+end
+
+local function AddReactionToMessage(msgData, emoji)
+    local reactionKey = GetReactionKey(msgData)
+    emoji = tostring(emoji or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if not reactionKey or reactionKey == "" or emoji == "" then return end
+    local state = ReactionState[reactionKey] or {}
+    local existing = state[emoji]
+    if existing and existing.Mine then return end
+    state[emoji] = state[emoji] or {Count = 0, Mine = false}
+    state[emoji].Count = state[emoji].Count + 1
+    state[emoji].Mine = true
+    ReactionState[reactionKey] = state
+    RefreshReactionVisual(reactionKey)
+    local isGlobal = msgData.ReactionIsGlobal == true
+    local reactionUrl = GetReactionEndpoint(isGlobal) .. "/" .. EncodeReactionPath(reactionKey) .. "/" .. EncodeReactionPath(emoji) .. "/" .. tostring(LocalPlayer.UserId) .. ".json"
+    task.spawn(function() HttpRequest(reactionUrl, "PUT", true) end)
+end
+
+local ReactionPicker = Instance.new("Frame")
+ReactionPicker.Name = "ReactionPicker"
+ReactionPicker.Size = UDim2.new(0, 270, 0, 74)
+ReactionPicker.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+ReactionPicker.BackgroundTransparency = 0.05
+ReactionPicker.BorderSizePixel = 0
+ReactionPicker.Visible = false
+ReactionPicker.ZIndex = 50
+ReactionPicker.Parent = ScreenGui
+local ReactionPickerCorner = Instance.new("UICorner")
+ReactionPickerCorner.CornerRadius = UDim.new(0, 10)
+ReactionPickerCorner.Parent = ReactionPicker
+local ReactionPickerStroke = Instance.new("UIStroke")
+ReactionPickerStroke.Thickness = 1.5
+ReactionPickerStroke.Transparency = 0.25
+ReactionPickerStroke.Color = Color3.fromRGB(90, 90, 110)
+ReactionPickerStroke.Parent = ReactionPicker
+local ReactionInput = Instance.new("TextBox")
+ReactionInput.Name = "ReactionInput"
+ReactionInput.Size = UDim2.new(1, -52, 0, 36)
+ReactionInput.Position = UDim2.new(0, 8, 0, 8)
+ReactionInput.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+ReactionInput.BackgroundTransparency = 0.05
+ReactionInput.BorderSizePixel = 0
+ReactionInput.ClearTextOnFocus = false
+ReactionInput.Font = Enum.Font.Gotham
+ReactionInput.PlaceholderText = "Type an emoji..."
+ReactionInput.PlaceholderColor3 = Color3.fromRGB(140, 140, 155)
+ReactionInput.Text = ""
+ReactionInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReactionInput.TextSize = 18
+ReactionInput.TextXAlignment = Enum.TextXAlignment.Center
+ReactionInput.ZIndex = 51
+ReactionInput.Parent = ReactionPicker
+local ReactionInputCorner = Instance.new("UICorner")
+ReactionInputCorner.CornerRadius = UDim.new(0, 8)
+ReactionInputCorner.Parent = ReactionInput
+local ReactionAddButton = Instance.new("TextButton")
+ReactionAddButton.Name = "ReactionAddButton"
+ReactionAddButton.Size = UDim2.new(0, 36, 0, 36)
+ReactionAddButton.Position = UDim2.new(1, -44, 0, 8)
+ReactionAddButton.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+ReactionAddButton.BorderSizePixel = 0
+ReactionAddButton.Font = Enum.Font.GothamBold
+ReactionAddButton.Text = "+"
+ReactionAddButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ReactionAddButton.TextSize = 20
+ReactionAddButton.ZIndex = 51
+ReactionAddButton.Parent = ReactionPicker
+local ReactionAddCorner = Instance.new("UICorner")
+ReactionAddCorner.CornerRadius = UDim.new(0, 8)
+ReactionAddCorner.Parent = ReactionAddButton
+local ReactionPickerHint = Instance.new("TextLabel")
+ReactionPickerHint.Size = UDim2.new(1, -16, 0, 18)
+ReactionPickerHint.Position = UDim2.new(0, 8, 1, -22)
+ReactionPickerHint.BackgroundTransparency = 1
+ReactionPickerHint.Font = Enum.Font.Gotham
+ReactionPickerHint.Text = "Press Enter or + to react"
+ReactionPickerHint.TextColor3 = Color3.fromRGB(145, 145, 160)
+ReactionPickerHint.TextSize = 9
+ReactionPickerHint.ZIndex = 51
+ReactionPickerHint.Parent = ReactionPicker
+local ReactionPickerMessage = nil
+local function HideReactionPicker()
+    ReactionPicker.Visible = false
+    ReactionPickerMessage = nil
+    ReactionInput.Text = ""
+end
+local function ShowReactionPicker(msgData, position)
+    ReactionPickerMessage = msgData
+    ReactionInput.Text = ""
+    ReactionPicker.Visible = true
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
+    local size = ReactionPicker.AbsoluteSize
+    local x = math.clamp(position.X, 4, math.max(4, viewport.X - size.X - 4))
+    local y = math.clamp(position.Y, 4, math.max(4, viewport.Y - size.Y - 4))
+    ReactionPicker.Position = UDim2.fromOffset(x, y)
+    task.defer(function() if ReactionPicker.Visible then ReactionInput:CaptureFocus() end end)
+end
+local function SubmitReactionInput()
+    if not ReactionPickerMessage then return end
+    local emoji = tostring(ReactionInput.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if emoji == "" then return end
+    AddReactionToMessage(ReactionPickerMessage, emoji)
+    HideReactionPicker()
+end
+ReactionAddButton.MouseButton1Click:Connect(SubmitReactionInput)
+ReactionInput.FocusLost:Connect(function(enterPressed) if enterPressed then SubmitReactionInput() end end)
+
 local ContextMenu = Instance.new("Frame")
 ContextMenu.Name = "ContextMenu"
 ContextMenu.Size = UDim2.new(0, 160, 0, 165)
@@ -2440,6 +2648,7 @@ ContextList.Parent = ContextMenu
 local function HideMessageContextMenu()
     ContextMenu.Visible = false
     CurrentContextMessage = nil
+    HideReactionPicker()
 end
 
 local function ResolvePrivateRecipient(prefix)
@@ -2514,276 +2723,6 @@ ClearPersistentPrivatePrefix = function()
     RefreshPrivateModeUI()
 end
 
-local function GetReactionMessageKey(msgData)
-    if not msgData then return nil end
-    if msgData.ClientMessageId and tostring(msgData.ClientMessageId) ~= "" then
-        return tostring(msgData.ClientMessageId)
-    end
-
-    -- Older messages may not have ClientMessageId. This fallback keeps their
-    -- reaction key stable for everyone who can see the same message.
-    return tostring(msgData.Username or "Unknown")
-        .. "_" .. tostring(msgData.Timestamp or 0)
-        .. "_" .. tostring(msgData.Text or "")
-end
-
-local function EncodeReactionPath(value)
-    value = tostring(value or "")
-    local ok, encoded = pcall(function()
-        return HttpService:UrlEncode(value)
-    end)
-    if ok and encoded then return encoded end
-    return (value:gsub("[^%w%-%._~]", function(ch)
-        return string.format("%%%02X", string.byte(ch))
-    end))
-end
-
-local function GetReactionEndpoint(isGlobal, messageKey)
-    local base = isGlobal and GLOBAL_REACTIONS_ENDPOINT or SERVER_REACTIONS_ENDPOINT
-    return base .. "/" .. EncodeReactionPath(messageKey) .. ".json"
-end
-
-local function GetReactionEmoji(index)
-    return REACTION_EMOJIS[tonumber(index) or 0]
-end
-
-local function GetReactionIndex(emoji)
-    for index, value in ipairs(REACTION_EMOJIS) do
-        if value == emoji then return index end
-    end
-    return nil
-end
-
-local function GetReactionSummary(messageKey, isGlobal)
-    local scope = isGlobal and "GLOBAL" or "SERVER"
-    return ReactionCache[scope][messageKey] or {}
-end
-
-local function UpdateReactionRow(frame, msgData, isGlobal)
-    if not frame or not frame.Parent then return end
-
-    local key = GetReactionMessageKey(msgData)
-    if not key then return end
-
-    local row = frame:FindFirstChild("ReactionRow")
-    if not row then return end
-
-    for _, child in ipairs(row:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    local summary = GetReactionSummary(key, isGlobal)
-    local hasAny = false
-
-    for reactionIndex, users in pairs(summary) do
-        local emoji = GetReactionEmoji(reactionIndex)
-        if emoji and type(users) == "table" then
-            local count = 0
-            local mine = false
-
-            for userId, enabled in pairs(users) do
-                if enabled then
-                    count = count + 1
-                    if tostring(userId) == tostring(LocalPlayer.UserId) then
-                        mine = true
-                    end
-                end
-            end
-
-            if count > 0 then
-                hasAny = true
-
-                local chip = Instance.new("TextButton")
-                chip.Name = "Reaction_" .. tostring(reactionIndex)
-                chip.AutomaticSize = Enum.AutomaticSize.X
-                chip.Size = UDim2.new(0, 0, 0, 22)
-                chip.BackgroundColor3 = mine and Color3.fromRGB(75, 45, 55) or Color3.fromRGB(30, 30, 42)
-                chip.BackgroundTransparency = 0.05
-                chip.BorderSizePixel = 0
-                chip.Font = Enum.Font.GothamMedium
-                chip.Text = " " .. emoji .. " " .. tostring(count) .. " "
-                chip.TextColor3 = Color3.fromRGB(240, 240, 245)
-                chip.TextSize = 10
-                chip.LayoutOrder = tonumber(reactionIndex) or 0
-                chip.ZIndex = 13
-                chip.Parent = row
-
-                local chipCorner = Instance.new("UICorner")
-                chipCorner.CornerRadius = UDim.new(0, 7)
-                chipCorner.Parent = chip
-
-                chip.MouseButton1Click:Connect(function()
-                    local idx = tonumber(reactionIndex)
-                    if not idx then return end
-
-                    local userKey = tostring(LocalPlayer.UserId)
-                    local url = GetReactionEndpoint(isGlobal, key)
-                        :gsub("%.json$", "/" .. userKey .. "/" .. tostring(idx) .. ".json")
-
-                    local mineNow = false
-                    local current = ReactionCache[isGlobal and "GLOBAL" or "SERVER"][key]
-                    if current and current[reactionIndex] and current[reactionIndex][userKey] then
-                        mineNow = true
-                    end
-
-                    if mineNow then
-                        HttpRequest(url, "DELETE")
-                    else
-                        HttpRequest(url, "PUT", true)
-                    end
-
-                    task.spawn(function()
-                        task.wait(0.08)
-                        local remote = HttpRequest(GetReactionEndpoint(isGlobal, key), "GET")
-                        if type(remote) == "table" then
-                            ReactionCache[isGlobal and "GLOBAL" or "SERVER"][key] = remote
-                            UpdateReactionRow(frame, msgData, isGlobal)
-                        end
-                    end)
-                end)
-            end
-        end
-    end
-
-    row.Visible = hasAny
-end
-
-local function EnsureReactionRow(frame, msgData, isGlobal)
-    local row = frame:FindFirstChild("ReactionRow")
-    if row then return row end
-
-    row = Instance.new("Frame")
-    row.Name = "ReactionRow"
-    row.Size = UDim2.new(1, -48, 0, 24)
-    row.Position = UDim2.new(0, 38, 0, 0)
-    row.BackgroundTransparency = 1
-    row.BorderSizePixel = 0
-    row.Visible = false
-    row.ZIndex = 12
-    row.Parent = frame
-
-    local layout = Instance.new("UIListLayout")
-    layout.FillDirection = Enum.FillDirection.Horizontal
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 4)
-    layout.Parent = row
-
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        row.Size = UDim2.new(1, -48, 0, math.max(24, layout.AbsoluteContentSize.Y))
-    end)
-
-    ReactionCards[isGlobal and "GLOBAL" or "SERVER"][GetReactionMessageKey(msgData)] = frame
-    UpdateReactionRow(frame, msgData, isGlobal)
-    return row
-end
-
-local function AddReactionToMessage(msgData, isGlobal, emoji)
-    if not msgData then return end
-
-    local index = GetReactionIndex(emoji)
-    local key = GetReactionMessageKey(msgData)
-    if not index or not key then return end
-
-    local userKey = tostring(LocalPlayer.UserId)
-    local scope = isGlobal and "GLOBAL" or "SERVER"
-    local cache = ReactionCache[scope][key] or {}
-    local users = cache[tostring(index)] or {}
-    local mine = users[userKey] == true
-
-    local url = GetReactionEndpoint(isGlobal, key)
-        :gsub("%.json$", "/" .. userKey .. "/" .. tostring(index) .. ".json")
-
-    if mine then
-        HttpRequest(url, "DELETE")
-        users[userKey] = nil
-    else
-        HttpRequest(url, "PUT", true)
-        users[userKey] = true
-    end
-
-    cache[tostring(index)] = users
-    ReactionCache[scope][key] = cache
-
-    local card = ReactionCards[scope][key]
-    if card then
-        UpdateReactionRow(card, msgData, isGlobal)
-    end
-end
-
-local function ShowReactionPicker(msgData, isGlobal)
-    if not msgData then return end
-
-    local existing = ScreenGui:FindFirstChild("KronosReactionPicker")
-    if existing then existing:Destroy() end
-
-    local picker = Instance.new("Frame")
-    picker.Name = "KronosReactionPicker"
-    picker.Size = UDim2.new(0, 296, 0, 42)
-    picker.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-    picker.BackgroundTransparency = 0.08
-    picker.BorderSizePixel = 0
-    picker.ZIndex = 40
-    picker.Parent = ScreenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 9)
-    corner.Parent = picker
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(65, 65, 80)
-    stroke.Transparency = 0.25
-    stroke.Parent = picker
-
-    local layout = Instance.new("UIListLayout")
-    layout.FillDirection = Enum.FillDirection.Horizontal
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 2)
-    layout.Parent = picker
-
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 4)
-    padding.PaddingRight = UDim.new(0, 4)
-    padding.Parent = picker
-
-    for index, emoji in ipairs(REACTION_EMOJIS) do
-        local button = Instance.new("TextButton")
-        button.Name = "Emoji_" .. tostring(index)
-        button.Size = UDim2.new(0, 34, 0, 34)
-        button.BackgroundTransparency = 1
-        button.BorderSizePixel = 0
-        button.Font = Enum.Font.Gotham
-        button.Text = emoji
-        button.TextSize = 19
-        button.ZIndex = 41
-        button.Parent = picker
-
-        button.MouseButton1Click:Connect(function()
-            AddReactionToMessage(msgData, isGlobal, emoji)
-            picker:Destroy()
-        end)
-    end
-
-    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
-    local menuPos = ContextMenu.AbsolutePosition
-    local menuSize = ContextMenu.AbsoluteSize
-    local x = math.clamp(menuPos.X, 4, math.max(4, viewport.X - picker.AbsoluteSize.X - 4))
-    local y = math.clamp(menuPos.Y - 46, 4, math.max(4, viewport.Y - 46))
-    picker.Position = UDim2.fromOffset(x, y)
-
-    task.defer(function()
-        if picker.Parent then
-            local p = picker.AbsoluteSize
-            local px = math.clamp(menuPos.X, 4, math.max(4, viewport.X - p.X - 4))
-            local py = math.clamp(menuPos.Y - p.Y - 4, 4, math.max(4, viewport.Y - p.Y - 4))
-            picker.Position = UDim2.fromOffset(px, py)
-        end
-    end)
-end
-
 local function ShowMessageContextMenu(msgData, position)
     CurrentContextMessage = msgData
     ContextMenu.Visible = true
@@ -2831,23 +2770,23 @@ local function BuildMessageContextMenu()
         if child:IsA("TextButton") then child:Destroy() end
     end
 
-    AddContextMenuButton("Copy Message", 1, function()
+    AddContextMenuButton("➕🫥", 1, function()
+        if not CurrentContextMessage then return end
+        local menuPos = ContextMenu.AbsolutePosition
+        ShowReactionPicker(CurrentContextMessage, Vector2.new(menuPos.X, menuPos.Y + ContextMenu.AbsoluteSize.Y + 6))
+    end)
+
+    AddContextMenuButton("Copy Message", 2, function()
         if CurrentContextMessage and setclipboard then
             setclipboard(tostring(CurrentContextMessage.Text or ""))
         end
     end)
 
-    AddContextMenuButton("Reply", 2, function()
+    AddContextMenuButton("Reply", 3, function()
         if not CurrentContextMessage then return end
         ReplyContextMessage = CurrentContextMessage
         RefreshReplyUI()
         MessageInput:CaptureFocus()
-    end)
-
-    AddContextMenuButton("➕🫥", 3, function()
-        if not CurrentContextMessage then return end
-        local isGlobal = ActiveTab == "GLOBAL"
-        ShowReactionPicker(CurrentContextMessage, isGlobal)
     end)
 
     AddContextMenuButton("Pvt Message", 4, function()
@@ -3135,36 +3074,57 @@ CreateMessageCard = function(msgData, isGlobal)
         pad.Parent = frame
     end
 
-    -- Discord-style reaction chips sit below the message content. The transparent
-    -- long-press layer remains above the card but below the reaction buttons.
-    local reactionRow = EnsureReactionRow(frame, msgData, isGlobal)
+    -- Discord-style reaction pills live beneath the message content.
+    local reactionKey = GetReactionKey(msgData)
+    if reactionKey and reactionKey ~= "" then
+        local reactionBar = Instance.new("Frame")
+        reactionBar.Name = "ReactionBar"
+        reactionBar.Size = UDim2.new(1, -48, 0, 28)
+        reactionBar.Position = UDim2.new(0, 38, 0, 24)
+        reactionBar.BackgroundTransparency = 1
+        reactionBar.Visible = false
+        reactionBar.ZIndex = 12
+        reactionBar.Parent = frame
+        reactionBar:SetAttribute("IsGlobal", isGlobal == true)
+        local reactionBottomPad = Instance.new("UIPadding")
+        reactionBottomPad.Name = "ReactionBottomPad"
+        reactionBottomPad.PaddingBottom = UDim.new(0, 0)
+        reactionBottomPad.Parent = frame
+        local reactionLayout = Instance.new("UIListLayout")
+        reactionLayout.FillDirection = Enum.FillDirection.Horizontal
+        reactionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        reactionLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        reactionLayout.Padding = UDim.new(0, 4)
+        reactionLayout.Parent = reactionBar
+        ReactionCards[reactionKey] = reactionBar
 
-    local function PositionReactionRow()
-        if not reactionRow or not reactionRow.Parent then return end
-
-        local bottomY = 24
-        local replyExtra = (msgData.ReplyToText and msgData.ReplyToText ~= "") and 34 or 0
-
-        if isSticker then
-            bottomY = replyExtra + 60 + 80
-        elseif msgData.IsServerInvite then
-            bottomY = replyExtra + 94 + 18
-        else
-            local content = frame:FindFirstChild("ContentLabel")
-            if content then
-                bottomY = content.Position.Y.Offset + content.AbsoluteSize.Y
-            else
-                bottomY = replyExtra + 30
+        local function PositionReactionBar()
+            local baseY = msgData.ReplyToText and 58 or 24
+            if msgData.IsServerInvite and msgData.PlaceId and msgData.JobId then
+                baseY = msgData.ReplyToText and 120 or 86
+            elseif isSticker then
+                baseY = msgData.ReplyToText and 60 or 26
             end
+
+            local contentHeight = 0
+            local contentLabel = frame:FindFirstChild("ContentLabel")
+            if contentLabel then
+                contentHeight = contentLabel.AbsoluteSize.Y
+            elseif isSticker then
+                contentHeight = 80
+            else
+                contentHeight = 34
+            end
+
+            reactionBar.Position = UDim2.new(0, 38, 0, baseY + contentHeight + 4)
         end
 
-        reactionRow.Position = UDim2.new(0, 38, 0, bottomY + 4)
-    end
-
-    task.defer(PositionReactionRow)
-    local contentForReaction = frame:FindFirstChild("ContentLabel")
-    if contentForReaction then
-        contentForReaction:GetPropertyChangedSignal("AbsoluteSize"):Connect(PositionReactionRow)
+        PositionReactionBar()
+        local contentLabelForReaction = frame:FindFirstChild("ContentLabel")
+        if contentLabelForReaction then
+            contentLabelForReaction:GetPropertyChangedSignal("AbsoluteSize"):Connect(PositionReactionBar)
+        end
+        RefreshReactionVisual(reactionKey)
     end
 
     -- Transparent interaction layer: long-pressing any part of the message opens the options menu.
@@ -3401,7 +3361,9 @@ SendChatMessage = function()
         ReplyToUsername = reply and reply.Username or nil,
         ReplyToDisplayName = reply and reply.DisplayName or nil,
         ReplyToText = reply and reply.Text or nil,
-        ReplyToTimestamp = reply and reply.Timestamp or nil
+        ReplyToTimestamp = reply and reply.Timestamp or nil,
+        ReactionKey = clientMessageId,
+        ReactionIsGlobal = (ActiveTab == "GLOBAL")
     }
 
     -- Render immediately. The UI no longer waits for Firebase at all.
@@ -3493,6 +3455,16 @@ local function PostServerJoinMessage()
     end)
 end
 
+local function PollReactionData(isGlobal)
+    local root = HttpRequest(GetReactionEndpoint(isGlobal), "GET")
+    if type(root) ~= "table" then return end
+    for reactionKey, reactionRoot in pairs(root) do
+        local key = tostring(reactionKey)
+        ReactionState[key] = RebuildReactionState(reactionRoot)
+        RefreshReactionVisual(key)
+    end
+end
+
 local function PollMessages()
     while true do
         FetchRemoteRankStyles()
@@ -3502,6 +3474,8 @@ local function PollMessages()
         if globalData and type(globalData) == "table" then
             for id, msg in pairs(globalData) do
                 if type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name) then
+                    msg.ReactionKey = tostring(msg.ClientMessageId or id)
+                    msg.ReactionIsGlobal = true
                     local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
                     if clientKey and GlobalCachedMessages[clientKey] then
                         GlobalCachedMessages[id] = msg
@@ -3516,31 +3490,14 @@ local function PollMessages()
             end
         end
 
-        local globalReactionData = HttpRequest(GLOBAL_REACTIONS_ENDPOINT, "GET")
-        if globalReactionData and type(globalReactionData) == "table" then
-            ReactionCache.GLOBAL = globalReactionData
-            for key, card in pairs(ReactionCards.GLOBAL) do
-                local msg = GlobalCachedMessages[key] or GlobalCachedMessages["local_" .. key]
-                if not msg then
-                    for _, cached in pairs(GlobalCachedMessages) do
-                        if type(cached) == "table" and GetReactionMessageKey(cached) == key then
-                            msg = cached
-                            break
-                        end
-                    end
-                end
-                if msg and card and card.Parent then
-                    UpdateReactionRow(card, msg, true)
-                end
-            end
-        end
-
         local serverData = HttpRequest(SERVER_MESSAGES_ENDPOINT, "GET")
         if serverData and type(serverData) == "table" then
             for id, msg in pairs(serverData) do
                 if type(msg) == "table" and msg.JoinEventId == JoinEventId then
                     -- Already rendered locally.
                 elseif type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name) then
+                    msg.ReactionKey = tostring(msg.ClientMessageId or id)
+                    msg.ReactionIsGlobal = false
                     local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
                     if clientKey and ServerCachedMessages[clientKey] then
                         ServerCachedMessages[id] = msg
@@ -3555,22 +3512,8 @@ local function PollMessages()
             end
         end
 
-        local serverReactionData = HttpRequest(SERVER_REACTIONS_ENDPOINT, "GET")
-        if serverReactionData and type(serverReactionData) == "table" then
-            ReactionCache.SERVER = serverReactionData
-            for key, card in pairs(ReactionCards.SERVER) do
-                local msg = nil
-                for _, cached in pairs(ServerCachedMessages) do
-                    if type(cached) == "table" and GetReactionMessageKey(cached) == key then
-                        msg = cached
-                        break
-                    end
-                end
-                if msg and card and card.Parent then
-                    UpdateReactionRow(card, msg, false)
-                end
-            end
-        end
+        PollReactionData(true)
+        PollReactionData(false)
 
         task.wait(2)
     end
