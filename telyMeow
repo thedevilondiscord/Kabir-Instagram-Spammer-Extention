@@ -833,7 +833,7 @@ local function AnimateRoleFont(textObject, roleName, style)
     end)
 end
 
-local ALL_AUTOCOMPLETE_OPTIONS = { "!tag", "!role", "!spoof", "!announce ", "!mute ", "/w " }
+local ALL_AUTOCOMPLETE_OPTIONS = { "!tag", "!role", "!spoof", "!announce ", "!mute ", "/testjoin ", "/w " }
 local CurrentContextMessage = nil
 local ReplyContextMessage = nil
 local ReplyHighlightToken = 0
@@ -926,7 +926,7 @@ Moderation.FormatMuteRemaining = function(seconds)
 end
 
 Moderation.RefreshAllRoleAutocomplete = function()
-    local optionsMap = { ["!tag"] = true, ["!role"] = true, ["!spoof"] = true, ["!announce "] = true, ["!mute "] = true, ["/w "] = true }
+    local optionsMap = { ["!tag"] = true, ["!role"] = true, ["!spoof"] = true, ["!announce "] = true, ["!mute "] = true, ["/testjoin "] = true, ["/w "] = true }
    
     for rankName, _ in pairs(RANK_STYLES) do
         optionsMap[rankName] = true
@@ -1015,27 +1015,6 @@ local ROLE_PERMISSIONS = {
     ["MALKIN🌸"] = {Spoof=true},
 }
 
--- Flavour join messages for certain highest roles. %s#1 = DisplayName, %s#2 = Username.
--- Any role not listed here falls back to the default rainbow join message.
-local ROLE_JOIN_MESSAGES = {
-    ["Architect"] = "Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect %s has descended into the Server Chat. (%s)",
-    ["Overseer"] = "A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer %s is now watching the Server Chat. (%s)",
-    ["Moderator"] = "The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator %s has stepped into the Server Chat. (%s)",
-    ["Developer"] = "The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer %s has spawned into the Server Chat. (%s)",
-    ["Hacker"] = "Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker %s has breached the Server Chat. (%s)",
-    ["One of the OGs👑"] = "A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 %s has graced the Server Chat. (%s)",
-    ["COM-GOD⛓️"] = "An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ %s has dominated the Server Chat. (%s)",
-    ["Regent of Clan🔥"] = "The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 %s has set the Server Chat ablaze. (%s)",
-}
-
-local function BuildRoleJoinText(displayName, username, roleName)
-    local template = ROLE_JOIN_MESSAGES[roleName]
-    if template then
-        return string.format(template, tostring(displayName), tostring(username))
-    end
-    return tostring(displayName) .. " has Joined the Server Chat"
-end
-
 local function RoleNameEquals(a, b)
     return string.lower(tostring(a or "")) == string.lower(tostring(b or ""))
 end
@@ -1045,15 +1024,6 @@ local function FindCanonicalRole(roleName)
         if RoleNameEquals(candidate, roleName) then return candidate end
     end
     return nil
-end
-
--- Any role at or below "Princess🩹" in ROLE_PRIORITY is free: every player,
--- including those with no assigned GitHub role, can switch to / use it.
-local FREE_ROLE_START_INDEX = ROLE_PRIORITY_INDEX["Princess🩹"]
-
-local function IsFreeRole(canonicalRoleName)
-    local idx = ROLE_PRIORITY_INDEX[canonicalRoleName]
-    return FREE_ROLE_START_INDEX ~= nil and idx ~= nil and idx >= FREE_ROLE_START_INDEX
 end
 
 local function GetPlayerRoles(username)
@@ -1619,6 +1589,11 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifText.Font = Enum.Font.GothamBold
     notifText.Text = msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
     notifText.TextColor3 = Color3.fromRGB(245, 245, 250)
+    if msgData.IsJoinMessage then
+        AnimateRainbowText(notifText)
+    elseif msgData.Announcement then
+        AnimateRainbowText(notifText)
+    end
     notifText.TextSize = 11
     notifText.TextWrapped = true
     notifText.TextXAlignment = Enum.TextXAlignment.Left
@@ -2750,10 +2725,10 @@ ServerInviteButton.Visible = true
 local function AnimateRainbowText(textObject)
     if not textObject then return end
     task.spawn(function()
-        local hue = 0
+        local start = tick()
         while textObject and textObject.Parent do
-            hue = (hue + 0.008) % 1
-            textObject.TextColor3 = Color3.fromHSV(hue, 0.9, 1)
+            local hue = ((tick() - start) * 0.18) % 1
+            textObject.TextColor3 = Color3.fromHSV(hue, 1, 1)
             task.wait(0.03)
         end
     end)
@@ -2934,17 +2909,14 @@ CreateMessageCard = function(msgData, isGlobal)
         contentLabel.Font = Enum.Font.Gotham
         contentLabel.Text = msgData.Text
         contentLabel.TextColor3 = msgData.IsPrivate and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(230, 230, 240)
+        if msgData.Announcement or msgData.IsJoinMessage then
+            AnimateRainbowText(contentLabel)
+        end
         contentLabel.TextSize = 11
         contentLabel.TextXAlignment = Enum.TextXAlignment.Left
         contentLabel.TextYAlignment = Enum.TextYAlignment.Top
         contentLabel.TextWrapped = true
         contentLabel.Parent = frame
-        -- Must animate AFTER Parent is assigned: AnimateRainbowText's loop
-        -- checks textObject.Parent to know when to stop, so calling it while
-        -- Parent is still nil made the loop exit before the first colour set.
-        if msgData.Announcement or msgData.IsJoinMessage then
-            AnimateRainbowText(contentLabel)
-        end
 
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 6)
@@ -3160,24 +3132,24 @@ SendChatMessage = function()
         ShowLocalSystemMessage("[AI MoD] : Notification test triggered successfully ✓")
         MessageInput.Text = ""
         return
-    elseif not isPrivate and typedText == "!joined" then
-        ShowLocalJoinMessage()
-        ShowLocalSystemMessage("[AI MoD] : Join-message test triggered successfully ✓")
-        MessageInput.Text = ""
-        return
     elseif not isPrivate and string.sub(typedText, 1, 10) == "/testjoin " then
-        local rankQuery = string.sub(typedText, 11):gsub("^%s+", ""):gsub("%s+$", "")
-        if rankQuery == "" then
-            ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: /testjoin [rank].", true)
-            MessageInput.Text = ""
-            return
+        local requestedRank = typedText:sub(11):gsub("^%s+", ""):gsub("%s+$", "")
+        local canonicalRank = FindCanonicalRole(requestedRank)
+        if not canonicalRank then
+            ShowLocalSystemMessage("[AI MoD] : Test failed. Unknown rank. Use !role to inspect the available roles.", true)
+        else
+            ShowLocalJoinMessage(canonicalRank, true)
+            ShowLocalSystemMessage("[AI MoD] : Local join-message test triggered for " .. canonicalRank .. " ✓")
         end
-        ShowTestJoinMessage(rankQuery)
-        ShowLocalSystemMessage("[AI MoD] : Test join message for '" .. rankQuery .. "' rendered locally ✓")
         MessageInput.Text = ""
         return
     elseif not isPrivate and typedText == "/testjoin" then
-        ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: /testjoin [rank].", true)
+        ShowLocalSystemMessage("[AI MoD] : Usage: /testjoin [rank]. Example: /testjoin Architect", true)
+        MessageInput.Text = ""
+        return
+    elseif not isPrivate and typedText == "!joined" then
+        ShowLocalJoinMessage()
+        ShowLocalSystemMessage("[AI MoD] : Join-message test triggered successfully ✓")
         MessageInput.Text = ""
         return
     elseif not isPrivate and string.sub(typedText, 1, 9) == "!announce" then
@@ -3226,9 +3198,7 @@ SendChatMessage = function()
     elseif not isPrivate and string.sub(typedText, 1, 5) == "!tag " then
         local requestedRole = string.sub(typedText, 6):gsub("^%s+", ""):gsub("%s+$", "")
         local canonical = FindCanonicalRole(requestedRole)
-        if not canonical then
-            ShowLocalSystemMessage("[AI MoD] : Command failed. '" .. requestedRole .. "' is not a recognised role.", true)
-        elseif not IsFreeRole(canonical) and not PlayerHasRole(LocalPlayer.Name, canonical) then
+        if not canonical or not PlayerHasRole(LocalPlayer.Name, canonical) then
             ShowLocalSystemMessage("[AI MoD] : Command failed. You are not assigned to the role '" .. requestedRole .. "' in the GitHub roster.", true)
         else
             AssignedPlayerRoles[LocalPlayer.Name] = canonical
@@ -3369,6 +3339,8 @@ MessageInput.FocusLost:Connect(function()
             or current:sub(1, 6) == "!mute "
             or current == "!announce"
             or current:sub(1, 9) == "!announce "
+            or current == "/testjoin"
+            or current:sub(1, 10) == "/testjoin "
 
         if not isCommand then
             HideCommandAutocomplete()
@@ -3381,63 +3353,62 @@ MessageInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then SendChatMessage() end
 end)
 
-function BuildJoinMessagePayload()
-    local highestRole = GetHighestRole(LocalPlayer.Name)
+local CUSTOM_JOIN_MESSAGES = {
+    ["Architect"] = "Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect %s has descended into the Server Chat. (%s)",
+    ["Overseer"] = "A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer %s is now watching the Server Chat. (%s)",
+    ["Moderator"] = "The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator %s has stepped into the Server Chat. (%s)",
+    ["Developer"] = "The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer %s has spawned into the Server Chat. (%s)",
+    ["Hacker"] = "Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker %s has breached the Server Chat. (%s)",
+    ["One of the OGs👑"] = "A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 %s has graced the Server Chat. (%s)",
+    ["COM-GOD⛓️"] = "An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ %s has dominated the Server Chat. (%s)",
+    ["Regent of Clan🔥"] = "The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 %s has set the Server Chat ablaze. (%s)",
+}
+
+local function BuildJoinMessagePayload(rankOverride, isTest)
+    local highestRole = rankOverride or GetHighestRole(LocalPlayer.Name)
+    local canonicalRole = FindCanonicalRole(highestRole) or highestRole
+    local playerName = LocalPlayer.DisplayName
+    local username = LocalPlayer.Name
+    local customText = CUSTOM_JOIN_MESSAGES[canonicalRole]
+    local joinText
+
+    if customText then
+        joinText = string.format(customText, playerName, username)
+    else
+        joinText = playerName .. " has Joined the Server Chat. (" .. username .. ")"
+    end
+
     return {
-        Username = "AI_MoD",
-        DisplayName = "AI MoD",
-        JoinedDisplayName = LocalPlayer.DisplayName,
-        Text = BuildRoleJoinText(LocalPlayer.DisplayName, LocalPlayer.Name, highestRole),
-        Timestamp = os.time(),
-        Role = "BOT",
-        PfpId = 78588114275746,
+        Username = LocalPlayer.Name,
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        JoinedDisplayName = playerName,
+        JoinedUsername = username,
+        Text = joinText,
+        Timestamp = os.time() + (math.random() / 1000),
+        Role = canonicalRole,
+        PfpId = CurrentPfpId,
         IsPrivate = false,
         IsJoinMessage = true,
-        JoinEventId = JoinEventId,
+        IsLocalJoinTest = isTest == true,
+        JoinEventId = isTest and ("LOCAL_TEST_JOIN_" .. tostring(os.clock()) .. "_" .. tostring(math.random(100000, 999999))) or JoinEventId,
     }
 end
 
--- Builds and renders a join message locally only (no Firebase POST), so any
--- player can preview what a given rank's join message looks like without
--- broadcasting it to the rest of the server.
-function ShowTestJoinMessage(rankQuery)
-    local canonicalRole = FindCanonicalRole(rankQuery) or rankQuery
-    local testJoinEventId = "test_" .. HttpService:GenerateGUID(false)
-    local payload = {
-        Username = "AI_MoD",
-        DisplayName = "AI MoD",
-        JoinedDisplayName = LocalPlayer.DisplayName,
-        Text = BuildRoleJoinText(LocalPlayer.DisplayName, LocalPlayer.Name, canonicalRole),
-        Timestamp = os.time(),
-        Role = "BOT",
-        PfpId = 78588114275746,
-        IsPrivate = false,
-        IsJoinMessage = true,
-        JoinEventId = testJoinEventId,
-    }
+function ShowLocalJoinMessage(rankOverride, isTest)
+    local payload = BuildJoinMessagePayload(rankOverride, isTest)
+    local localId = "local_join_" .. tostring(payload.JoinEventId)
 
-    local localId = "local_" .. testJoinEventId
     ServerCachedMessages[localId] = payload
     local card = CreateMessageCard(payload, false)
     card.Visible = (ActiveTab == "SERVER")
+    card:SetAttribute("LocalOnly", true)
     table.insert(ServerUIElements, card)
     DisplayNewMessageNotif(payload, localId)
-end
-
-function ShowLocalJoinMessage()
-    local payload = BuildJoinMessagePayload()
-    local localId = "local_join_" .. JoinEventId
-
-    -- Immediate local render: the joining client does not wait for Firebase.
-    ServerCachedMessages[localId] = payload
-    local card = CreateMessageCard(payload, false)
-    card.Visible = (ActiveTab == "SERVER")
-    table.insert(ServerUIElements, card)
-    DisplayNewMessageNotif(payload, localId)
+    return payload
 end
 
 function PostServerJoinMessage()
-    local payload = BuildJoinMessagePayload()
+    local payload = BuildJoinMessagePayload(nil, false)
     task.spawn(function()
         HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
     end)
