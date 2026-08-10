@@ -2411,6 +2411,89 @@ AutoCompleteLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(funct
     AutoCompleteFrame.CanvasSize = UDim2.new(0, 0, 0, AutoCompleteLayout.AbsoluteContentSize.Y + 6)
 end)
 
+-- Sticker preview overlay
+local StickerPreviewOverlay = Instance.new("Frame")
+StickerPreviewOverlay.Name = "StickerPreviewOverlay"
+StickerPreviewOverlay.Size = UDim2.new(1, 0, 1, 0)
+StickerPreviewOverlay.Position = UDim2.new(0, 0, 0, 0)
+StickerPreviewOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+StickerPreviewOverlay.BackgroundTransparency = 0.35
+StickerPreviewOverlay.BorderSizePixel = 0
+StickerPreviewOverlay.Visible = false
+StickerPreviewOverlay.ZIndex = 100
+StickerPreviewOverlay.Parent = ScreenGui
+
+local StickerPreviewCard = Instance.new("Frame")
+StickerPreviewCard.Name = "StickerPreviewCard"
+StickerPreviewCard.Size = UDim2.new(0, 300, 0, 330)
+StickerPreviewCard.Position = UDim2.new(0.5, -150, 0.5, -165)
+StickerPreviewCard.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+StickerPreviewCard.BackgroundTransparency = 0.08
+StickerPreviewCard.BorderSizePixel = 0
+StickerPreviewCard.ZIndex = 101
+StickerPreviewCard.Parent = StickerPreviewOverlay
+
+local StickerPreviewCorner = Instance.new("UICorner")
+StickerPreviewCorner.CornerRadius = UDim.new(0, 14)
+StickerPreviewCorner.Parent = StickerPreviewCard
+
+local StickerPreviewStroke = Instance.new("UIStroke")
+StickerPreviewStroke.Thickness = 2
+StickerPreviewStroke.Color = Color3.fromRGB(220, 30, 30)
+StickerPreviewStroke.Transparency = 0.2
+StickerPreviewStroke.Parent = StickerPreviewCard
+
+local StickerPreviewImage = Instance.new("ImageLabel")
+StickerPreviewImage.Name = "StickerPreviewImage"
+StickerPreviewImage.Size = UDim2.new(1, -32, 1, -72)
+StickerPreviewImage.Position = UDim2.new(0, 16, 0, 16)
+StickerPreviewImage.BackgroundTransparency = 1
+StickerPreviewImage.ScaleType = Enum.ScaleType.Fit
+StickerPreviewImage.ZIndex = 102
+StickerPreviewImage.Parent = StickerPreviewCard
+
+local StickerPreviewClose = Instance.new("TextButton")
+StickerPreviewClose.Name = "CloseButton"
+StickerPreviewClose.Size = UDim2.new(1, -32, 0, 38)
+StickerPreviewClose.Position = UDim2.new(0, 16, 1, -50)
+StickerPreviewClose.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+StickerPreviewClose.BackgroundTransparency = 0.15
+StickerPreviewClose.BorderSizePixel = 0
+StickerPreviewClose.Font = Enum.Font.GothamBold
+StickerPreviewClose.Text = "CLOSE"
+StickerPreviewClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+StickerPreviewClose.TextSize = 12
+StickerPreviewClose.ZIndex = 103
+StickerPreviewClose.Parent = StickerPreviewCard
+
+local StickerPreviewCloseCorner = Instance.new("UICorner")
+StickerPreviewCloseCorner.CornerRadius = UDim.new(0, 8)
+StickerPreviewCloseCorner.Parent = StickerPreviewClose
+
+local function HideStickerPreview()
+    StickerPreviewOverlay.Visible = false
+    StickerPreviewImage.Image = ""
+end
+
+local function ShowStickerPreview(stickerUrl)
+    if not stickerUrl or stickerUrl == "" then return end
+    StickerPreviewImage.Image = tostring(stickerUrl)
+    StickerPreviewOverlay.Visible = true
+end
+
+StickerPreviewClose.Activated:Connect(HideStickerPreview)
+
+StickerPreviewOverlay.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local p = input.Position
+        local pos = StickerPreviewCard.AbsolutePosition
+        local size = StickerPreviewCard.AbsoluteSize
+        if p.X < pos.X or p.X > pos.X + size.X or p.Y < pos.Y or p.Y > pos.Y + size.Y then
+            HideStickerPreview()
+        end
+    end
+end)
+
 local ContextMenu = Instance.new("Frame")
 ContextMenu.Name = "ContextMenu"
 ContextMenu.Size = UDim2.new(0, 160, 0, 125)
@@ -2818,14 +2901,45 @@ CreateMessageCard = function(msgData, isGlobal)
         pad.PaddingBottom = UDim.new(0, 8)
         pad.Parent = frame
     elseif isSticker then
-        local stickerImg = Instance.new("ImageLabel")
+        local stickerImg = Instance.new("ImageButton")
         stickerImg.Name = "StickerMsg"
         stickerImg.Size = UDim2.new(0, 80, 0, 80)
         stickerImg.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 60 or 26)
         stickerImg.BackgroundTransparency = 1
+        stickerImg.BorderSizePixel = 0
         stickerImg.Image = msgData.Text
         stickerImg.ScaleType = Enum.ScaleType.Fit
+        stickerImg.AutoButtonColor = false
+        stickerImg.ZIndex = 11
         stickerImg.Parent = frame
+
+        -- A normal click previews the sticker; long-press is still handled by
+        -- the existing full-card interaction layer below.
+        local stickerPressToken = 0
+
+        stickerImg.Activated:Connect(function()
+            -- Activated is the short click; long-press is handled separately below.
+            ShowStickerPreview(msgData.Text)
+        end)
+
+        stickerImg.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            stickerPressToken = stickerPressToken + 1
+            local token = stickerPressToken
+            local pressPosition = input.Position
+
+            task.delay(0.65, function()
+                if token ~= stickerPressToken or not stickerImg.Parent then return end
+                HideStickerPreview()
+                ShowMessageContextMenu(msgData, pressPosition)
+            end)
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    stickerPressToken = stickerPressToken + 1
+                end
+            end)
+        end)
 
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 8)
