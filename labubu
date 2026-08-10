@@ -1600,19 +1600,22 @@ local function DisplayNewMessageNotif(msgData, messageId)
     ActiveNotifBtn = notifBtn
     PlayNotificationSound(msgData.IsJoinMessage and JOIN_SOUND_ID or NOTIFICATION_SOUND_ID)
 
-    TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+    local showTween = TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
         Position = UDim2.new(0, 0, 0, 0)
-    }):Play()
+    })
+    showTween:Play()
 
-    task.delay(3.5, function()
+    task.delay(4, function()
         if ActiveNotifBtn == notifBtn and notifBtn and notifBtn.Parent then
             ActiveNotifBtn = nil
-            local slideOut = TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            local hideTween = TweenService:Create(notifBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Position = UDim2.new(0, 0, -1, 0)
             })
-            slideOut:Play()
-            slideOut.Completed:Wait()
-            if notifBtn and notifBtn.Parent then notifBtn:Destroy() end
+            hideTween:Play()
+            hideTween.Completed:Wait()
+            if notifBtn and notifBtn.Parent then
+                notifBtn:Destroy()
+            end
         end
     end)
 
