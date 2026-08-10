@@ -1015,6 +1015,27 @@ local ROLE_PERMISSIONS = {
     ["MALKIN🌸"] = {Spoof=true},
 }
 
+-- Flavour join messages for certain highest roles. %s#1 = DisplayName, %s#2 = Username.
+-- Any role not listed here falls back to the default rainbow join message.
+local ROLE_JOIN_MESSAGES = {
+    ["Architect"] = "Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect %s has descended into the Server Chat. (%s)",
+    ["Overseer"] = "A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer %s is now watching the Server Chat. (%s)",
+    ["Moderator"] = "The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator %s has stepped into the Server Chat. (%s)",
+    ["Developer"] = "The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer %s has spawned into the Server Chat. (%s)",
+    ["Hacker"] = "Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker %s has breached the Server Chat. (%s)",
+    ["One of the OGs👑"] = "A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 %s has graced the Server Chat. (%s)",
+    ["COM-GOD⛓️"] = "An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ %s has dominated the Server Chat. (%s)",
+    ["Regent of Clan🔥"] = "The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 %s has set the Server Chat ablaze. (%s)",
+}
+
+local function BuildRoleJoinText(displayName, username, roleName)
+    local template = ROLE_JOIN_MESSAGES[roleName]
+    if template then
+        return string.format(template, tostring(displayName), tostring(username))
+    end
+    return tostring(displayName) .. " has Joined the Server Chat"
+end
+
 local function RoleNameEquals(a, b)
     return string.lower(tostring(a or "")) == string.lower(tostring(b or ""))
 end
@@ -2913,14 +2934,17 @@ CreateMessageCard = function(msgData, isGlobal)
         contentLabel.Font = Enum.Font.Gotham
         contentLabel.Text = msgData.Text
         contentLabel.TextColor3 = msgData.IsPrivate and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(230, 230, 240)
-        if msgData.Announcement then
-            AnimateRainbowText(contentLabel)
-        end
         contentLabel.TextSize = 11
         contentLabel.TextXAlignment = Enum.TextXAlignment.Left
         contentLabel.TextYAlignment = Enum.TextYAlignment.Top
         contentLabel.TextWrapped = true
         contentLabel.Parent = frame
+        -- Must animate AFTER Parent is assigned: AnimateRainbowText's loop
+        -- checks textObject.Parent to know when to stop, so calling it while
+        -- Parent is still nil made the loop exit before the first colour set.
+        if msgData.Announcement or msgData.IsJoinMessage then
+            AnimateRainbowText(contentLabel)
+        end
 
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 6)
@@ -3141,6 +3165,21 @@ SendChatMessage = function()
         ShowLocalSystemMessage("[AI MoD] : Join-message test triggered successfully ✓")
         MessageInput.Text = ""
         return
+    elseif not isPrivate and string.sub(typedText, 1, 10) == "/testjoin " then
+        local rankQuery = string.sub(typedText, 11):gsub("^%s+", ""):gsub("%s+$", "")
+        if rankQuery == "" then
+            ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: /testjoin [rank].", true)
+            MessageInput.Text = ""
+            return
+        end
+        ShowTestJoinMessage(rankQuery)
+        ShowLocalSystemMessage("[AI MoD] : Test join message for '" .. rankQuery .. "' rendered locally ✓")
+        MessageInput.Text = ""
+        return
+    elseif not isPrivate and typedText == "/testjoin" then
+        ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: /testjoin [rank].", true)
+        MessageInput.Text = ""
+        return
     elseif not isPrivate and string.sub(typedText, 1, 9) == "!announce" then
         if not CanUseModerationCommands(LocalPlayer.Name) then
             ShowLocalSystemMessage("[AI MoD] : Command failed. Only Architect, Overseer and Moderator can use !announce.", true)
@@ -3343,11 +3382,12 @@ MessageInput.FocusLost:Connect(function(enterPressed)
 end)
 
 function BuildJoinMessagePayload()
+    local highestRole = GetHighestRole(LocalPlayer.Name)
     return {
         Username = "AI_MoD",
         DisplayName = "AI MoD",
         JoinedDisplayName = LocalPlayer.DisplayName,
-        Text = LocalPlayer.DisplayName .. " has Joined the Server Chat",
+        Text = BuildRoleJoinText(LocalPlayer.DisplayName, LocalPlayer.Name, highestRole),
         Timestamp = os.time(),
         Role = "BOT",
         PfpId = 78588114275746,
@@ -3355,6 +3395,33 @@ function BuildJoinMessagePayload()
         IsJoinMessage = true,
         JoinEventId = JoinEventId,
     }
+end
+
+-- Builds and renders a join message locally only (no Firebase POST), so any
+-- player can preview what a given rank's join message looks like without
+-- broadcasting it to the rest of the server.
+function ShowTestJoinMessage(rankQuery)
+    local canonicalRole = FindCanonicalRole(rankQuery) or rankQuery
+    local testJoinEventId = "test_" .. HttpService:GenerateGUID(false)
+    local payload = {
+        Username = "AI_MoD",
+        DisplayName = "AI MoD",
+        JoinedDisplayName = LocalPlayer.DisplayName,
+        Text = BuildRoleJoinText(LocalPlayer.DisplayName, LocalPlayer.Name, canonicalRole),
+        Timestamp = os.time(),
+        Role = "BOT",
+        PfpId = 78588114275746,
+        IsPrivate = false,
+        IsJoinMessage = true,
+        JoinEventId = testJoinEventId,
+    }
+
+    local localId = "local_" .. testJoinEventId
+    ServerCachedMessages[localId] = payload
+    local card = CreateMessageCard(payload, false)
+    card.Visible = (ActiveTab == "SERVER")
+    table.insert(ServerUIElements, card)
+    DisplayNewMessageNotif(payload, localId)
 end
 
 function ShowLocalJoinMessage()
