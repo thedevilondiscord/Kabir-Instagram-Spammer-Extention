@@ -804,6 +804,270 @@ local RANK_STYLES = {
     ["CR⚽7"] = { Start = Color3.fromRGB(255, 255, 255), End = Color3.fromRGB(80, 80, 80), Name = Color3.fromRGB(245, 245, 245), Speed = 0.8 },
     ["🏎️Verr33"] = { Start = Color3.fromRGB(255, 70, 30), End = Color3.fromRGB(0, 90, 255), Name = Color3.fromRGB(255, 140, 90), Speed = 0.75 },
 }
+
+-- ============================================================================
+-- ELITE CHAT BANNER / MESSAGE FX
+-- These cosmetics sit on top of the existing rank system. Existing roles,
+-- Firebase payloads and message logic remain unchanged. Only selected elite
+-- ranks receive the additional animated banner, floating emoji and bold text.
+-- ============================================================================
+local CHAT_BANNER_FX = {
+    ["Architect"] = {
+        Accent = Color3.fromRGB(255, 40, 40),
+        Accent2 = Color3.fromRGB(90, 0, 0),
+        Emojis = {"⚡", "✦", "◆"},
+        ParticleCount = 3,
+        FloatSpeed = 1.15,
+        PulseSpeed = 0.9,
+        BannerText = "⚡ ARCHITECT",
+    },
+    ["Overseer"] = {
+        Accent = Color3.fromRGB(255, 90, 70),
+        Accent2 = Color3.fromRGB(100, 0, 0),
+        Emojis = {"◈", "◆", "⚔"},
+        ParticleCount = 3,
+        FloatSpeed = 1.25,
+        PulseSpeed = 1.0,
+        BannerText = "◈ OVERSEER",
+    },
+    ["Moderator"] = {
+        Accent = Color3.fromRGB(255, 165, 0),
+        Accent2 = Color3.fromRGB(110, 35, 0),
+        Emojis = {"🛡", "✦", "⚠"},
+        ParticleCount = 2,
+        FloatSpeed = 1.35,
+        PulseSpeed = 1.1,
+        BannerText = "🛡 MODERATOR",
+    },
+    ["Developer"] = {
+        Accent = Color3.fromRGB(0, 220, 255),
+        Accent2 = Color3.fromRGB(0, 45, 100),
+        Emojis = {"</>", "⚙", "◆"},
+        ParticleCount = 3,
+        FloatSpeed = 1.2,
+        PulseSpeed = 1.0,
+        BannerText = "🧑‍💻 DEV CONTRIBUTOR",
+    },
+    ["Hacker"] = {
+        Accent = Color3.fromRGB(0, 255, 80),
+        Accent2 = Color3.fromRGB(0, 55, 0),
+        Emojis = {"💀", "🟩", "▰", "⌁"},
+        ParticleCount = 4,
+        FloatSpeed = 0.9,
+        PulseSpeed = 0.75,
+        BannerText = "🧑‍💻 🟩 HACKER 💀",
+        Glitch = true,
+    },
+    ["One of the OGs👑"] = {
+        Accent = Color3.fromRGB(255, 215, 0),
+        Accent2 = Color3.fromRGB(105, 50, 0),
+        Emojis = {"🏅", "✦", "◆"},
+        ParticleCount = 3,
+        FloatSpeed = 1.35,
+        PulseSpeed = 1.2,
+        BannerText = "🏅 ONE OF THE OGs",
+    },
+    ["COM-GOD⛓️"] = {
+        Accent = Color3.fromRGB(235, 235, 245),
+        Accent2 = Color3.fromRGB(55, 55, 65),
+        Emojis = {"⛓️", "✦", "◆"},
+        ParticleCount = 3,
+        FloatSpeed = 1.15,
+        PulseSpeed = 0.85,
+        BannerText = "⛓️ COM-GOD",
+    },
+    ["Regent of Clan🔥"] = {
+        Accent = Color3.fromRGB(255, 115, 0),
+        Accent2 = Color3.fromRGB(100, 0, 0),
+        Emojis = {"👑", "🔥", "✦"},
+        ParticleCount = 3,
+        FloatSpeed = 1.05,
+        PulseSpeed = 0.95,
+        BannerText = "👑 REGENT OF CLAN",
+    },
+    ["Carnage🩸"] = {
+        Accent = Color3.fromRGB(235, 0, 0),
+        Accent2 = Color3.fromRGB(65, 0, 0),
+        Emojis = {"🩸", "🔥", "◆"},
+        ParticleCount = 3,
+        FloatSpeed = 0.85,
+        PulseSpeed = 0.7,
+        BannerText = "🩸 CARNAGE",
+        Glitch = true,
+    },
+}
+
+local function AddEliteChatBannerFX(frame, roleName, style)
+    local fx = CHAT_BANNER_FX[roleName]
+    if not fx or not frame or not frame.Parent then return end
+
+    frame.ClipsDescendants = false
+
+    -- Subtle rank-tinted banner strip. It stays behind the existing name/tag.
+    local banner = Instance.new("Frame")
+    banner.Name = "EliteRankBanner"
+    banner.Size = UDim2.new(1, -38, 0, 22)
+    banner.Position = UDim2.new(0, 38, 0, 2)
+    banner.BackgroundColor3 = fx.Accent2
+    banner.BackgroundTransparency = 0.88
+    banner.BorderSizePixel = 0
+    banner.ZIndex = 1
+    banner.Parent = frame
+
+    local bannerCorner = Instance.new("UICorner")
+    bannerCorner.CornerRadius = UDim.new(0, 6)
+    bannerCorner.Parent = banner
+
+    local bannerGradient = Instance.new("UIGradient")
+    bannerGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, fx.Accent),
+        ColorSequenceKeypoint.new(0.5, fx.Accent2),
+        ColorSequenceKeypoint.new(1, fx.Accent),
+    })
+    bannerGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.15),
+        NumberSequenceKeypoint.new(0.5, 0.85),
+        NumberSequenceKeypoint.new(1, 0.15),
+    })
+    bannerGradient.Parent = banner
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "EliteBannerStroke"
+    stroke.Thickness = 1.25
+    stroke.Transparency = 0.35
+    stroke.Color = fx.Accent
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = banner
+
+    local strokeGradient = Instance.new("UIGradient")
+    strokeGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, fx.Accent),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, fx.Accent2),
+    })
+    strokeGradient.Parent = stroke
+
+    local bannerText = Instance.new("TextLabel")
+    bannerText.Name = "EliteBannerText"
+    bannerText.Size = UDim2.new(1, -10, 1, 0)
+    bannerText.Position = UDim2.new(0, 5, 0, 0)
+    bannerText.BackgroundTransparency = 1
+    bannerText.Text = fx.BannerText
+    bannerText.TextColor3 = fx.Accent
+    bannerText.TextTransparency = 0.72
+    bannerText.Font = Enum.Font.GothamBold
+    bannerText.TextSize = 8
+    bannerText.TextXAlignment = Enum.TextXAlignment.Right
+    bannerText.TextYAlignment = Enum.TextYAlignment.Center
+    bannerText.ZIndex = 2
+    bannerText.Parent = banner
+
+    -- Rotating highlight gives the banner a premium animated-card look.
+    task.spawn(function()
+        while banner and banner.Parent do
+            strokeGradient.Rotation = (strokeGradient.Rotation + 90) % 360
+            bannerGradient.Rotation = (bannerGradient.Rotation + 45) % 360
+            task.wait(0.08)
+        end
+    end)
+
+    task.spawn(function()
+        while stroke and stroke.Parent do
+            local pulse = TweenService:Create(
+                stroke,
+                TweenInfo.new(fx.PulseSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {Transparency = 0.72, Thickness = 1}
+            )
+            pulse:Play()
+            pulse.Completed:Wait()
+            if not stroke or not stroke.Parent then break end
+            local restore = TweenService:Create(
+                stroke,
+                TweenInfo.new(fx.PulseSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {Transparency = 0.25, Thickness = 1.5}
+            )
+            restore:Play()
+            restore.Completed:Wait()
+        end
+    end)
+
+    -- Floating emoji particles. These are GUI text objects so no external
+    -- assets are required and the effect works across the existing chat.
+    for i = 1, math.min(fx.ParticleCount or 2, #fx.Emojis) do
+        local particle = Instance.new("TextLabel")
+        particle.Name = "EliteFloatingFX_" .. tostring(i)
+        particle.Size = UDim2.new(0, 22, 0, 22)
+        particle.AnchorPoint = Vector2.new(0.5, 0.5)
+        particle.Position = UDim2.new(1, -30 - (i * 24), 0, 17 + ((i % 2) * 3))
+        particle.BackgroundTransparency = 1
+        particle.Text = fx.Emojis[i]
+        particle.TextColor3 = fx.Accent
+        particle.TextTransparency = 0.18
+        particle.TextStrokeTransparency = 0.55
+        particle.TextStrokeColor3 = fx.Accent2
+        particle.Font = Enum.Font.GothamBold
+        particle.TextSize = (i == 1) and 13 or 10
+        particle.ZIndex = 3
+        particle.Parent = frame
+
+        local startX = particle.Position.X.Offset
+        local startY = particle.Position.Y.Offset
+        local delayTime = (i - 1) * 0.22 + math.random() * 0.25
+
+        task.spawn(function()
+            task.wait(delayTime)
+            while particle and particle.Parent do
+                local driftX = startX + math.random(-10, 10)
+                local driftY = startY + math.random(-8, 8)
+                local rise = math.random(5, 11)
+                local duration = math.max(0.55, (fx.FloatSpeed or 1) + math.random() * 0.45)
+
+                particle.Position = UDim2.new(1, driftX, 0, driftY)
+                particle.TextTransparency = 0.15
+                particle.Rotation = math.random(-12, 12)
+
+                local tween = TweenService:Create(
+                    particle,
+                    TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                    {
+                        Position = UDim2.new(1, driftX + math.random(-8, 8), 0, driftY - rise),
+                        TextTransparency = 0.9,
+                        Rotation = particle.Rotation + math.random(-25, 25),
+                    }
+                )
+                tween:Play()
+                tween.Completed:Wait()
+            end
+        end)
+    end
+
+    -- Hacker/Carnage receive a restrained glitch pulse instead of moving the
+    -- entire card, which avoids disrupting chat layout or long-press input.
+    if fx.Glitch then
+        task.spawn(function()
+            while banner and banner.Parent do
+                task.wait(math.random(18, 35) / 10)
+                if not banner or not banner.Parent then break end
+                local original = banner.BackgroundTransparency
+                banner.BackgroundTransparency = 0.72
+                bannerText.TextTransparency = 0.25
+                task.wait(0.045)
+                if not banner or not banner.Parent then break end
+                banner.BackgroundTransparency = original
+                bannerText.TextTransparency = 0.72
+                task.wait(0.035)
+                if not banner or not banner.Parent then break end
+                banner.BackgroundTransparency = 0.8
+                task.wait(0.035)
+                if banner and banner.Parent then
+                    banner.BackgroundTransparency = original
+                    bannerText.TextTransparency = 0.72
+                end
+            end
+        end)
+    end
+end
+
 -- ============================================================================
 -- ROLE/TAG FONT ANIMATION
 -- The entire role-name font smoothly transitions between its assigned colours.
@@ -2776,6 +3040,14 @@ CreateMessageCard = function(msgData, isGlobal)
 
     local roleName = msgData.Role or GetAssignedOrCalculatedRole(msgData.Username)
     local style = RANK_STYLES[roleName] or RANK_STYLES["VIP"]
+    local eliteFx = CHAT_BANNER_FX[roleName]
+
+    -- Keep the original dark card for normal roles; elite roles receive only
+    -- a very subtle tint so the new FX harmonizes with the existing UI.
+    if eliteFx and not msgData.IsPrivate then
+        frame.BackgroundColor3 = eliteFx.Accent2
+        frame.BackgroundTransparency = 0.72
+    end
 
     local tagLabel = Instance.new("TextLabel")
     tagLabel.Name = "RoleTag"
@@ -2920,7 +3192,9 @@ CreateMessageCard = function(msgData, isGlobal)
         contentLabel.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
         contentLabel.AutomaticSize = Enum.AutomaticSize.Y
         contentLabel.BackgroundTransparency = 1
-        contentLabel.Font = Enum.Font.Gotham
+        -- Elite-rank messages are bold; all existing lower-rank messages keep
+        -- the original Gotham font exactly as before.
+        contentLabel.Font = eliteFx and Enum.Font.GothamBold or Enum.Font.Gotham
         contentLabel.Text = msgData.Text
         contentLabel.TextColor3 = msgData.IsPrivate and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(230, 230, 240)
         if msgData.Announcement then
@@ -2935,6 +3209,12 @@ CreateMessageCard = function(msgData, isGlobal)
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 6)
         pad.Parent = frame
+    end
+
+    -- Elite banner FX are added after the message content is constructed so
+    -- they never alter the existing message data or Firebase behaviour.
+    if eliteFx then
+        AddEliteChatBannerFX(frame, roleName, style)
     end
 
     -- Transparent interaction layer: long-pressing any part of the message opens the options menu.
