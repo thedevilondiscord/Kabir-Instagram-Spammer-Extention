@@ -45,7 +45,7 @@ local PFP_SAVE_KEY = "Kronos_UserPFP_AssetId"
 local DefaultPfpId = "110388265928893"
 
 local CurrentPfpId = (function()
-    if readfile and isfile and isfile(PFP_SAVE_KEY .. ".txt") then
+    if type(readfile) == "function" and type(isfile) == "function" and isfile(PFP_SAVE_KEY .. ".txt") then
         local success, saved = pcall(function() return readfile(PFP_SAVE_KEY .. ".txt") end)
         if success and saved and saved ~= "" then return saved end
     end
@@ -54,7 +54,7 @@ end)()
 
 local function SavePfpIdLocally(assetId)
     CurrentPfpId = tostring(assetId)
-    if writefile then
+    if type(writefile) == "function" then
         pcall(function() writefile(PFP_SAVE_KEY .. ".txt", CurrentPfpId) end)
     end
 end
@@ -411,9 +411,13 @@ local function applyRPProfile()
                   or reFolder:FindFirstChild("RPName")
 
     if rpRemote then
-        if not lplr.Character or not lplr.Character:FindFirstChild("HumanoidRootPart") then
-            lplr.CharacterAdded:Wait()
-            task.wait(1)
+        local character = lplr.Character
+        if not character or not character.Parent then
+            character = lplr.CharacterAdded:Wait()
+        end
+        local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+        if not root then
+            return
         end
 
         task.spawn(function()
@@ -444,17 +448,23 @@ task.spawn(function()
             local brightRed = Color3.fromRGB(255, 0, 0)
             local pureWhite = Color3.fromRGB(255, 255, 255)
             local startTime = tick()
+            local lastSent = 0
+            local sendInterval = 0.5
 
-            while true do
-                local elapsed = tick() - startTime
+            while colorRemote and colorRemote.Parent do
+                local now = tick()
+                local elapsed = now - startTime
                 local factor = (math.sin(elapsed * frequency) + 1) / 2
                 local lerpedNameColor = brightRed:Lerp(pureWhite, factor)
 
-                pcall(function()
-                    colorRemote:FireServer("PickingRPNameColor", lerpedNameColor)
-                    colorRemote:FireServer("PickingRPBioColor", pureWhite)
-                end)
-                task.wait(0.1)
+                if now - lastSent >= sendInterval then
+                    pcall(function()
+                        colorRemote:FireServer("PickingRPNameColor", lerpedNameColor)
+                        colorRemote:FireServer("PickingRPBioColor", pureWhite)
+                    end)
+                    lastSent = now
+                end
+                task.wait(0.05)
             end
         end
     end
@@ -988,10 +998,19 @@ end
 -- ============================================================================
 -- HTTP HANDLER (MULTI-EXECUTOR COMPATIBLE)
 -- ============================================================================
-local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
+local http_req = nil
+pcall(function()
+    http_req = (type(syn) == "table" and syn.request)
+        or (type(http) == "table" and http.request)
+        or (type(http_request) == "function" and http_request)
+        or (type(request) == "function" and request)
+        or (type(fluxus) == "table" and fluxus.request)
+end)
 
 local function HttpRequest(url, method, data)
-    if not http_req then return nil end
+    if type(http_req) ~= "function" then
+        return nil
+    end
     local success, response = pcall(function()
         return http_req({
             Url = url,
@@ -1209,7 +1228,6 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 450, 0, 320)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
@@ -2952,7 +2970,8 @@ local function RenderCustomChatBubble(msgData)
     local targetPlayer = FindBubblePlayer(msgData)
     if not targetPlayer then return end
     local character = targetPlayer.Character
-    local head = character and character:FindFirstChild("Head")
+    if not character or not character.Parent then return end
+    local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 2)
     if not head then return end
 
     local old = ActiveChatBubbles[targetPlayer]
@@ -3805,3 +3824,5 @@ function KronosProtectedSpoofRole(name)
     name = tostring(name or ""):lower()
     return name == "architect" or name == "overseer"
 end
+
+-- KRONOS script end: all functions and control blocks are intentionally closed.
