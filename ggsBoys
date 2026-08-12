@@ -24,15 +24,6 @@ local MessageInput = nil
 local SendChatMessage = nil
 local CreateMessageCard = nil
 
--- Addons / visual-render settings. These are client-local and do not alter
--- the existing chat transport, moderation, roles, or message data.
-local AddonSettings = {
-    ChatBubbleRender = true,
-    AuraEngineRender = true,
-}
-local SettingsPanel = nil
-local SettingsOpen = false
-
 -- Anti-Spam Tracking State
 local LastSentMessageText = ""
 local ConsecutiveSpamCount = 0
@@ -45,7 +36,7 @@ local PFP_SAVE_KEY = "Kronos_UserPFP_AssetId"
 local DefaultPfpId = "110388265928893"
 
 local CurrentPfpId = (function()
-    if type(readfile) == "function" and type(isfile) == "function" and isfile(PFP_SAVE_KEY .. ".txt") then
+    if readfile and isfile and isfile(PFP_SAVE_KEY .. ".txt") then
         local success, saved = pcall(function() return readfile(PFP_SAVE_KEY .. ".txt") end)
         if success and saved and saved ~= "" then return saved end
     end
@@ -54,7 +45,7 @@ end)()
 
 local function SavePfpIdLocally(assetId)
     CurrentPfpId = tostring(assetId)
-    if type(writefile) == "function" then
+    if writefile then
         pcall(function() writefile(PFP_SAVE_KEY .. ".txt", CurrentPfpId) end)
     end
 end
@@ -411,13 +402,9 @@ local function applyRPProfile()
                   or reFolder:FindFirstChild("RPName")
 
     if rpRemote then
-        local character = lplr.Character
-        if not character or not character.Parent then
-            character = lplr.CharacterAdded:Wait()
-        end
-        local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
-        if not root then
-            return
+        if not lplr.Character or not lplr.Character:FindFirstChild("HumanoidRootPart") then
+            lplr.CharacterAdded:Wait()
+            task.wait(1)
         end
 
         task.spawn(function()
@@ -448,23 +435,17 @@ task.spawn(function()
             local brightRed = Color3.fromRGB(255, 0, 0)
             local pureWhite = Color3.fromRGB(255, 255, 255)
             local startTime = tick()
-            local lastSent = 0
-            local sendInterval = 0.5
 
-            while colorRemote and colorRemote.Parent do
-                local now = tick()
-                local elapsed = now - startTime
+            while true do
+                local elapsed = tick() - startTime
                 local factor = (math.sin(elapsed * frequency) + 1) / 2
                 local lerpedNameColor = brightRed:Lerp(pureWhite, factor)
 
-                if now - lastSent >= sendInterval then
-                    pcall(function()
-                        colorRemote:FireServer("PickingRPNameColor", lerpedNameColor)
-                        colorRemote:FireServer("PickingRPBioColor", pureWhite)
-                    end)
-                    lastSent = now
-                end
-                task.wait(0.05)
+                pcall(function()
+                    colorRemote:FireServer("PickingRPNameColor", lerpedNameColor)
+                    colorRemote:FireServer("PickingRPBioColor", pureWhite)
+                end)
+                task.wait(0.1)
             end
         end
     end
@@ -776,7 +757,7 @@ local RANK_STYLES = {
     ["Architect"] = { Start = Color3.fromRGB(255, 40, 40), End = Color3.fromRGB(80, 0, 0), Name = Color3.fromRGB(255, 90, 90), Speed = 0.8 },
     ["Overseer"] = { Start = Color3.fromRGB(255, 80, 80), End = Color3.fromRGB(80, 0, 0), Name = Color3.fromRGB(255, 120, 120), Speed = 0.9 },
     ["Moderator"] = { Start = Color3.fromRGB(255, 165, 0), End = Color3.fromRGB(100, 35, 0), Name = Color3.fromRGB(255, 190, 70), Speed = 1.0 },
-    ["Dev-Contributor"] = { Start = Color3.fromRGB(0, 220, 255), End = Color3.fromRGB(0, 40, 100), Name = Color3.fromRGB(80, 235, 255), Speed = 0.9 },
+    ["Developer"] = { Start = Color3.fromRGB(0, 220, 255), End = Color3.fromRGB(0, 40, 100), Name = Color3.fromRGB(80, 235, 255), Speed = 0.9 },
     ["Hacker"] = { Start = Color3.fromRGB(0, 255, 80), End = Color3.fromRGB(0, 60, 0), Name = Color3.fromRGB(80, 255, 120), Speed = 0.75 },
     ["BOT"] = { Start = Color3.fromRGB(255, 70, 70), End = Color3.fromRGB(30, 0, 0), Name = Color3.fromRGB(255, 110, 110), Speed = 0.7 },
     ["One of the OGs👑"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(100, 45, 0), Name = Color3.fromRGB(255, 230, 80), Speed = 1.0 },
@@ -786,7 +767,7 @@ local RANK_STYLES = {
     ["Psychopath💀"] = { Start = Color3.fromRGB(190, 40, 80), End = Color3.fromRGB(50, 0, 20), Name = Color3.fromRGB(255, 80, 120), Speed = 0.8 },
     ["Manipulator😈"] = { Start = Color3.fromRGB(170, 70, 255), End = Color3.fromRGB(40, 0, 80), Name = Color3.fromRGB(210, 120, 255), Speed = 0.9 },
     ["Narcissist"] = { Start = Color3.fromRGB(255, 20, 120), End = Color3.fromRGB(70, 0, 40), Name = Color3.fromRGB(255, 90, 170), Speed = 1.0 },
-    ["DARK🦇KNIGHT"] = { Start = Color3.fromRGB(80, 100, 255), End = Color3.fromRGB(10, 10, 30), Name = Color3.fromRGB(140, 160, 255), Speed = 1.0 },
+    ["BATMAN🦇"] = { Start = Color3.fromRGB(80, 100, 255), End = Color3.fromRGB(10, 10, 30), Name = Color3.fromRGB(140, 160, 255), Speed = 1.0 },
     ["PIRATE·KING🏴‍☠️"] = { Start = Color3.fromRGB(0, 220, 180), End = Color3.fromRGB(0, 50, 50), Name = Color3.fromRGB(80, 255, 220), Speed = 0.9 },
     ["HOMELANDER🇺🇸"] = { Start = Color3.fromRGB(30, 100, 255), End = Color3.fromRGB(120, 0, 0), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
     ["SUPER·SAYAN"] = { Start = Color3.fromRGB(255, 220, 40), End = Color3.fromRGB(255, 80, 0), Name = Color3.fromRGB(255, 245, 130), Speed = 0.75 },
@@ -879,20 +860,6 @@ local ANNOUNCER_NAME = "ANNOUNCER"
 local ANNOUNCER_PFP_ID = "132432242608689"
 local ANNOUNCEMENT_TEXT_COLOR = Color3.fromRGB(255, 255, 0) -- Neon Yellow
 local ANNOUNCEMENT_TEXT_SIZE = 12
-
--- Chat message presentation. All normal chat messages use the same 12px bold
--- typography as announcements; selected high-priority roles receive fixed
--- message colours.
-local CHAT_MESSAGE_TEXT_SIZE = ANNOUNCEMENT_TEXT_SIZE
-local CHAT_MESSAGE_TEXT_COLORS = {
-    ["Architect"] = Color3.fromRGB(255, 255, 0),          -- Neon Yellow
-    ["Overseer"] = Color3.fromRGB(255, 255, 0),           -- Neon Yellow
-    ["Dev-Contributor"] = Color3.fromRGB(255, 165, 0),    -- Orange
-    ["One of the OGs👑"] = Color3.fromRGB(255, 165, 0),   -- Orange
-    ["Moderator"] = Color3.fromRGB(0, 255, 255),         -- Cyan
-    ["Hacker"] = Color3.fromRGB(0, 255, 0),              -- Bright Green
-    ["DARK🦇KNIGHT"] = Color3.fromRGB(64, 224, 208),     -- Turquoise
-}
 
 Moderation.NormalizeName = function(s)
     return string.lower(tostring(s or ""))
@@ -998,69 +965,26 @@ end
 -- ============================================================================
 -- HTTP HANDLER (MULTI-EXECUTOR COMPATIBLE)
 -- ============================================================================
-local http_req = nil
-pcall(function()
-    http_req = (type(syn) == "table" and syn.request)
-        or (type(http) == "table" and http.request)
-        or (type(http_request) == "function" and http_request)
-        or (type(request) == "function" and request)
-        or (type(fluxus) == "table" and fluxus.request)
-end)
+local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
-    method = string.upper(tostring(method or "GET"))
-    local body = data and HttpService:JSONEncode(data) or nil
-
-    -- Prefer executor request APIs when available. Different executors expose
-    -- response bodies under different field names, so normalize them here.
-    if type(http_req) == "function" then
-        local success, response = pcall(function()
-            return http_req({
-                Url = url,
-                Method = method,
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = body
-            })
-        end)
-
-        if success and response then
-            local responseBody = response.Body or response.body or response.ResponseBody or response.responseBody
-            if responseBody == nil and type(response) == "string" then
-                responseBody = response
-            end
-            if responseBody ~= nil then
-                if type(responseBody) ~= "string" then
-                    return responseBody
-                end
-                if responseBody == "" or responseBody == "null" then
-                    return true
-                end
-                local decodedSuccess, decodedData = pcall(function()
-                    return HttpService:JSONDecode(responseBody)
-                end)
-                if decodedSuccess then
-                    return decodedData
-                end
-                -- Some endpoints may legitimately return plain text.
-                return responseBody
-            end
-        end
-    end
-
-    -- Safe fallback for normal Roblox environments with HTTP enabled.
-    local fallbackSuccess, fallbackResult = pcall(function()
-        if method == "GET" then
-            local raw = HttpService:GetAsync(url, false)
-            if raw == "" or raw == "null" then return true end
-            return HttpService:JSONDecode(raw)
-        elseif method == "POST" then
-            local raw = HttpService:PostAsync(url, body or "", Enum.HttpContentType.ApplicationJson, false)
-            if raw == "" or raw == "null" then return true end
-            return HttpService:JSONDecode(raw)
-        end
-        return nil
+    if not http_req then return nil end
+    local success, response = pcall(function()
+        return http_req({
+            Url = url,
+            Method = method or "GET",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = data and HttpService:JSONEncode(data) or nil
+        })
     end)
-    return fallbackSuccess and fallbackResult or nil
+
+    if success and response and response.Body then
+        local decodedSuccess, decodedData = pcall(function()
+            return HttpService:JSONDecode(response.Body)
+        end)
+        return decodedSuccess and decodedData or nil
+    end
+    return nil
 end
 
 -- ============================================================================
@@ -1069,9 +993,9 @@ end
 -- a player appears in more than one role. Earlier entries have higher priority.
 -- ============================================================================
 local ROLE_PRIORITY = {
-    "Architect", "Overseer", "Moderator", "Dev-Contributor", "Hacker", "BOT",
+    "Architect", "Overseer", "Moderator", "Developer", "Hacker", "BOT",
     "One of the OGs👑", "COM-GOD⛓️", "Regent of Clan🔥", "Carnage🩸",
-    "Psychopath💀", "Manipulator😈", "Narcissist", "DARK🦇KNIGHT",
+    "Psychopath💀", "Manipulator😈", "Narcissist", "BATMAN🦇",
     "PIRATE·KING🏴‍☠️", "HOMELANDER🇺🇸", "SUPER·SAYAN", "POOKIE🎀",
     "MALKIN🌸", "HAWTIE🥵", "GOAT🐐", "SCHOOL-CRUSH😍", "SPANKER☠️",
     "DADDY🎅", "Princess🩹", "CODM🎮", "BGMI·CONQUEROR🏅", "FF·HEROIC🔫",
@@ -1087,7 +1011,7 @@ local ROLE_PERMISSIONS = {
     ["Architect"] = {Spoof=true, Announce=true, Kick=true, Ban=true, Mute=true, PlayMusic=true},
     ["Overseer"] = {Spoof=true, Announce=true, Kick=true, Mute=true, PlayMusic=true},
     ["Moderator"] = {Spoof=true, Announce=true, Mute=true, Kick=true, PlayMusic=true},
-    ["Dev-Contributor"] = {Spoof=true, PlayMusic=true},
+    ["Developer"] = {Spoof=true, PlayMusic=true},
     ["Hacker"] = {Spoof=true, PlayMusic=true},
     ["One of the OGs👑"] = {Spoof=true, PlayMusic=true},
     ["COM-GOD⛓️"] = {Spoof=true},
@@ -1263,6 +1187,7 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 450, 0, 320)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 MainFrame.BackgroundTransparency = 0.35
@@ -1404,170 +1329,6 @@ task.spawn(function()
     end
 end)
 
--- ============================================================================
--- ADDONS SETTINGS BUTTON / PANEL
--- ============================================================================
--- The settings button sits immediately to the left of the KRONOS header label.
-local SettingsButton = Instance.new("TextButton")
-SettingsButton.Name = "SettingsButton"
-SettingsButton.Size = UDim2.new(0, 30, 0, 26)
-SettingsButton.Position = UDim2.new(1, -122, 0, 5)
-SettingsButton.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-SettingsButton.BackgroundTransparency = 0.25
-SettingsButton.BorderSizePixel = 0
-SettingsButton.Font = Enum.Font.GothamBold
-SettingsButton.Text = "⚙"
-SettingsButton.TextColor3 = Color3.fromRGB(240, 240, 245)
-SettingsButton.TextSize = 15
-SettingsButton.AutoButtonColor = false
-SettingsButton.ZIndex = 50
-SettingsButton.Parent = HeaderBar
-
-local SettingsCorner = Instance.new("UICorner")
-SettingsCorner.CornerRadius = UDim.new(0, 8)
-SettingsCorner.Parent = SettingsButton
-
-local SettingsStroke = Instance.new("UIStroke")
-SettingsStroke.Thickness = 1.5
-SettingsStroke.Color = Color3.fromRGB(255, 0, 0)
-SettingsStroke.Transparency = 0.35
-SettingsStroke.Parent = SettingsButton
-
-SettingsButton.MouseEnter:Connect(function()
-    TweenService:Create(SettingsButton, TweenInfo.new(0.12), {BackgroundTransparency = 0.05}):Play()
-    TweenService:Create(SettingsButton, TweenInfo.new(0.12), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-end)
-SettingsButton.MouseLeave:Connect(function()
-    TweenService:Create(SettingsButton, TweenInfo.new(0.15), {BackgroundTransparency = 0.25}):Play()
-end)
-
-SettingsPanel = Instance.new("Frame")
-SettingsPanel.Name = "AddonsSettingsPanel"
-SettingsPanel.Size = UDim2.new(0, 245, 0, 150)
-SettingsPanel.Position = UDim2.new(1, -253, 0, 39)
-SettingsPanel.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-SettingsPanel.BackgroundTransparency = 0.08
-SettingsPanel.BorderSizePixel = 0
-SettingsPanel.Visible = false
-SettingsPanel.ZIndex = 100
-SettingsPanel.Active = true
-SettingsPanel.Parent = MainFrame
-
-local SettingsPanelCorner = Instance.new("UICorner")
-SettingsPanelCorner.CornerRadius = UDim.new(0, 12)
-SettingsPanelCorner.Parent = SettingsPanel
-
-local SettingsPanelStroke = Instance.new("UIStroke")
-SettingsPanelStroke.Thickness = 2
-SettingsPanelStroke.Transparency = 0.1
-SettingsPanelStroke.Color = Color3.fromRGB(255, 0, 0)
-SettingsPanelStroke.Parent = SettingsPanel
-
-local SettingsPanelGradient = Instance.new("UIGradient")
-SettingsPanelGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 25, 35)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
-})
-SettingsPanelGradient.Rotation = 25
-SettingsPanelGradient.Parent = SettingsPanelStroke
-
-local AddonsTitle = Instance.new("TextLabel")
-AddonsTitle.Name = "AddonsTitle"
-AddonsTitle.Size = UDim2.new(1, -20, 0, 28)
-AddonsTitle.Position = UDim2.new(0, 10, 0, 7)
-AddonsTitle.BackgroundTransparency = 1
-AddonsTitle.Font = Enum.Font.GothamBold
-AddonsTitle.Text = "ADDONS"
-AddonsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-AddonsTitle.TextSize = 13
-AddonsTitle.TextXAlignment = Enum.TextXAlignment.Left
-AddonsTitle.ZIndex = 101
-AddonsTitle.Parent = SettingsPanel
-
-local function CreateAddonToggle(name, labelText, y, stateGetter, stateSetter)
-    local row = Instance.new("Frame")
-    row.Name = name .. "Row"
-    row.Size = UDim2.new(1, -20, 0, 43)
-    row.Position = UDim2.new(0, 10, 0, y)
-    row.BackgroundTransparency = 1
-    row.ZIndex = 101
-    row.Parent = SettingsPanel
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(235, 235, 240)
-    label.TextSize = 11
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 102
-    label.Parent = row
-
-    local switch = Instance.new("TextButton")
-    switch.Name = name .. "Switch"
-    switch.Size = UDim2.new(0, 50, 0, 24)
-    switch.Position = UDim2.new(1, -50, 0.5, -12)
-    switch.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    switch.BorderSizePixel = 0
-    switch.Text = ""
-    switch.AutoButtonColor = false
-    switch.ZIndex = 102
-    switch.Parent = row
-
-    local switchCorner = Instance.new("UICorner")
-    switchCorner.CornerRadius = UDim.new(1, 0)
-    switchCorner.Parent = switch
-
-    local knob = Instance.new("Frame")
-    knob.Name = "Knob"
-    knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    knob.BorderSizePixel = 0
-    knob.ZIndex = 103
-    knob.Parent = switch
-
-    local knobCorner = Instance.new("UICorner")
-    knobCorner.CornerRadius = UDim.new(1, 0)
-    knobCorner.Parent = knob
-
-    local function refresh()
-        local enabled = stateGetter()
-        switch.BackgroundColor3 = enabled and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)
-        knob.Position = enabled and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-    end
-
-    switch.MouseButton1Click:Connect(function()
-        stateSetter(not stateGetter())
-        refresh()
-    end)
-
-    refresh()
-    return row
-end
-
-CreateAddonToggle("ChatBubbleRender", "Chat Bubble Render", 39,
-    function() return AddonSettings.ChatBubbleRender end,
-    function(v) AddonSettings.ChatBubbleRender = v end)
-CreateAddonToggle("AuraEngineRender", "Aura Engine Render", 82,
-    function() return AddonSettings.AuraEngineRender end,
-    function(v) AddonSettings.AuraEngineRender = v end)
-
-local SettingsPanelScale = Instance.new("UIScale")
-SettingsPanelScale.Scale = 0.92
-SettingsPanelScale.Parent = SettingsPanel
-
-SettingsButton.MouseButton1Click:Connect(function()
-    SettingsOpen = not SettingsOpen
-    SettingsPanel.Visible = SettingsOpen
-    if SettingsOpen then
-        SettingsPanelScale.Scale = 0.92
-        TweenService:Create(SettingsPanelScale, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-    end
-end)
-
--- Keep the existing KRONOS label and all existing header controls unchanged.
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "ChatToggleButton"
 ToggleButton.Size = UDim2.new(0, 116, 0, 40)
@@ -1752,9 +1513,7 @@ local function DisplayNewMessageNotif(msgData, messageId)
     local isClient = (msgData.Username == LocalPlayer.Name)
     local formattedName = GetFormattedDisplayName(rawName, isClient)
     local rawText = msgData.Text or ""
-    if msgData.IsSpecialJoinAnnouncement then
-        rawText = tostring(msgData.Text or "Special role joined")
-    elseif msgData.IsJoinMessage then
+    if msgData.IsJoinMessage then
         rawText = tostring(msgData.JoinedDisplayName or msgData.Text or "Unknown") .. " has Joined the Server Chat"
     elseif string.sub(rawText, 1, 11) == "rbxthumb://" or string.sub(rawText, 1, 13) == "rbxassetid://" then
         rawText = "[Sticker]"
@@ -1789,15 +1548,7 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifStroke.Parent = notifBtn
 
     local notifGradient = Instance.new("UIGradient")
-    if msgData.IsSpecialJoinAnnouncement then
-        notifGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 215, 0)),
-            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 80, 80)),
-            ColorSequenceKeypoint.new(1.00, Color3.fromRGB(120, 0, 0)),
-        })
-    elseif msgData.IsJoinMessage then
+    if msgData.IsJoinMessage then
         notifGradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
             ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
@@ -1841,9 +1592,7 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifText.Position = UDim2.new(0, 54, 0, 4)
     notifText.BackgroundTransparency = 1
     notifText.Font = Enum.Font.GothamBold
-    notifText.Text = msgData.IsSpecialJoinAnnouncement and (tostring(msgData.Text or "Special role joined"))
-        or (msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat")
-        or (formattedName .. " : " .. formattedMsg))
+    notifText.Text = msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
     notifText.TextColor3 = Color3.fromRGB(245, 245, 250)
     notifText.TextSize = 11
     notifText.TextWrapped = true
@@ -2989,156 +2738,453 @@ local function AnimateRainbowText(textObject)
     end)
 end
 
--- ============================================================================
--- CUSTOM BLACK-GLASS CHAT BUBBLE
--- ============================================================================
-local ActiveChatBubbles = {}
 
-local function FindBubblePlayer(msgData)
-    local username = tostring(msgData.Username or "")
-    local displayName = tostring(msgData.DisplayName or "")
-    for _, player in ipairs(Players:GetPlayers()) do
-        if string.lower(player.Name) == string.lower(username)
-            or string.lower(player.DisplayName) == string.lower(displayName)
-            or string.lower(player.DisplayName) == string.lower(username) then
-            return player
+-- ============================================================================
+-- LOCAL 3D CHAT BUBBLE SYSTEM
+-- Locally rendered only: nothing is replicated to other clients.
+-- Mirrors normal Roblox-style overhead chat behaviour while using a black
+-- glassmorphic body and a fast animated black/red gradient border.
+-- ============================================================================
+
+local LocalBubbleFolder = Instance.new("Folder")
+LocalBubbleFolder.Name = "KronosLocalChatBubbles"
+LocalBubbleFolder.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local LocalBubbleStacks = {}       -- [Player] = { BillboardGui, ... }
+local LocalBubbleTokens = {}      -- [BillboardGui] = unique lifetime token
+local LocalBubbleConnections = {} -- [BillboardGui] = RenderStepped connection
+local LocalBubbleMessageIds = {}  -- prevents duplicate local rendering
+
+local LOCAL_BUBBLE_LIFETIME = 5.5
+local LOCAL_BUBBLE_FADE_TIME = 0.35
+local LOCAL_BUBBLE_MAX_WIDTH = 260
+local LOCAL_BUBBLE_MIN_WIDTH = 90
+local LOCAL_BUBBLE_TEXT_SIZE = 14
+local LOCAL_BUBBLE_MAX_STACK = 4
+local LOCAL_BUBBLE_OFFSET_START = 3.35
+local LOCAL_BUBBLE_OFFSET_STEP = 1.35
+local LOCAL_BUBBLE_BORDER_SPEED = 220
+
+local LocalBubbleTextService = game:GetService("TextService")
+
+local function LocalBubbleGetPlayer(senderUsername, senderUserId, senderDisplayName)
+    local wantedUsername = tostring(senderUsername or "")
+    local wantedUserId = tostring(senderUserId or "")
+    local wantedDisplayName = tostring(senderDisplayName or "")
+
+    if wantedUsername ~= "" then
+        local exact = Players:FindFirstChild(wantedUsername)
+        if exact then return exact end
+    end
+
+    if wantedUserId ~= "" then
+        local numericId = tonumber(wantedUserId)
+        if numericId then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.UserId == numericId then
+                    return player
+                end
+            end
         end
     end
+
+    if wantedDisplayName ~= "" then
+        local lowered = string.lower(wantedDisplayName)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if string.lower(player.DisplayName) == lowered then
+                return player
+            end
+        end
+    end
+
     return nil
 end
 
-local function RenderCustomChatBubble(msgData)
-    if not AddonSettings.ChatBubbleRender then return end
-    if not msgData or msgData.IsPrivate or msgData.IsSticker or msgData.MuteAction then return end
-    local text = tostring(msgData.Text or "")
-    if text == "" or text:sub(1, 11) == "rbxthumb://" or text:sub(1, 13) == "rbxassetid://" then return end
+local function LocalBubbleDisconnect(bubble)
+    local connection = LocalBubbleConnections[bubble]
+    if connection then
+        pcall(function() connection:Disconnect() end)
+        LocalBubbleConnections[bubble] = nil
+    end
+end
 
-    local targetPlayer = FindBubblePlayer(msgData)
-    if not targetPlayer then return end
-    local character = targetPlayer.Character
-    if not character or not character.Parent then return end
-    local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 2)
-    if not head then return end
+local function LocalBubbleRemoveFromStack(player, bubble)
+    local stack = LocalBubbleStacks[player]
+    if not stack then return end
 
-    local old = ActiveChatBubbles[targetPlayer]
-    if old and old.Gui and old.Gui.Parent then
-        old.Gui:Destroy()
+    for i = #stack, 1, -1 do
+        if stack[i] == bubble then
+            table.remove(stack, i)
+        end
     end
 
-    local maxWidth = 270
-    local horizontalPadding = 20
-    local textSize = 14
-    local lineCapacity = 28
-    local estimatedLines = math.max(1, math.ceil(#text / lineCapacity))
-    local bubbleWidth = math.clamp(math.min(maxWidth, 70 + math.min(#text, lineCapacity) * 6), 90, maxWidth)
-    local bubbleHeight = math.clamp(34 + ((estimatedLines - 1) * 17), 34, 100)
+    if #stack == 0 then
+        LocalBubbleStacks[player] = nil
+    end
+end
 
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "KronosBlackGlassBubble"
-    bb.Adornee = head
-    bb.Size = UDim2.new(0, bubbleWidth, 0, bubbleHeight)
-    bb.StudsOffset = Vector3.new(0, 3.25, 0)
-    bb.AlwaysOnTop = true
-    bb.MaxDistance = 100
-    bb.LightInfluence = 0
-    bb.Parent = head
+local function LocalBubbleReflow(player)
+    local stack = LocalBubbleStacks[player]
+    if not stack then return end
 
-    local outer = Instance.new("Frame")
-    outer.Name = "GradientBorder"
-    outer.Size = UDim2.new(1, 0, 1, 0)
-    outer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    outer.BorderSizePixel = 0
-    outer.Parent = bb
+    local compact = {}
+    for _, bubble in ipairs(stack) do
+        if bubble and bubble.Parent then
+            table.insert(compact, bubble)
+        end
+    end
+    LocalBubbleStacks[player] = compact
 
-    local outerCorner = Instance.new("UICorner")
-    outerCorner.CornerRadius = UDim.new(0, 12)
-    outerCorner.Parent = outer
+    -- Newest bubble stays closest to the head; older bubbles move upward,
+    -- matching the familiar stacked Roblox chat-bubble behaviour.
+    for index, bubble in ipairs(compact) do
+        local targetOffset = LOCAL_BUBBLE_OFFSET_START + ((index - 1) * LOCAL_BUBBLE_OFFSET_STEP)
+        pcall(function()
+            TweenService:Create(
+                bubble,
+                TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {StudsOffset = Vector3.new(0, targetOffset, 0)}
+            ):Play()
+        end)
+    end
+end
+
+local function LocalBubbleFadeAndDestroy(player, bubble, token)
+    if not bubble or not bubble.Parent then
+        LocalBubbleRemoveFromStack(player, bubble)
+        return
+    end
+
+    if LocalBubbleTokens[bubble] ~= token then return end
+
+    LocalBubbleTokens[bubble] = nil
+    LocalBubbleDisconnect(bubble)
+
+    local frame = bubble:FindFirstChild("BubbleFrame")
+    local label = frame and frame:FindFirstChild("BubbleText")
+    local stroke = frame and frame:FindFirstChild("BubbleStroke")
+    local tail = bubble:FindFirstChild("BubbleTail")
+
+    if frame then
+        TweenService:Create(
+            frame,
+            TweenInfo.new(LOCAL_BUBBLE_FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        ):Play()
+    end
+
+    if label then
+        TweenService:Create(
+            label,
+            TweenInfo.new(LOCAL_BUBBLE_FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextTransparency = 1, TextStrokeTransparency = 1}
+        ):Play()
+    end
+
+    if stroke then
+        TweenService:Create(
+            stroke,
+            TweenInfo.new(LOCAL_BUBBLE_FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Transparency = 1}
+        ):Play()
+    end
+
+    if tail then
+        TweenService:Create(
+            tail,
+            TweenInfo.new(LOCAL_BUBBLE_FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        ):Play()
+
+        local tailStroke = tail:FindFirstChild("TailStroke")
+        if tailStroke then
+            TweenService:Create(
+                tailStroke,
+                TweenInfo.new(LOCAL_BUBBLE_FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Transparency = 1}
+            ):Play()
+        end
+    end
+
+    task.delay(LOCAL_BUBBLE_FADE_TIME, function()
+        if bubble and bubble.Parent then
+            bubble:Destroy()
+        end
+        LocalBubbleRemoveFromStack(player, bubble)
+        LocalBubbleReflow(player)
+    end)
+end
+
+local function LocalBubbleCreate(player, messageText, messageId)
+    if not player or not messageText then return end
+
+    messageText = tostring(messageText)
+    if messageText == "" or messageText:match("^%s*$") then return end
+
+    -- Ignore non-chat payloads. Stickers, joins, announcements, moderation
+    -- events and private messages continue to use the existing UI only.
+    if messageId and LocalBubbleMessageIds[messageId] then return end
+    if messageId then
+        LocalBubbleMessageIds[messageId] = true
+    end
+
+    local character = player.Character
+    if not character then return end
+
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    -- Keep the bubble width close to normal Roblox chat proportions while
+    -- allowing short messages to remain compact.
+    local measured = LocalBubbleTextService:GetTextSize(
+        messageText,
+        LOCAL_BUBBLE_TEXT_SIZE,
+        Enum.Font.GothamBold,
+        Vector2.new(LOCAL_BUBBLE_MAX_WIDTH - 28, 1000)
+    )
+
+    local bubbleWidth = math.clamp(measured.X + 28, LOCAL_BUBBLE_MIN_WIDTH, LOCAL_BUBBLE_MAX_WIDTH)
+    local bubbleHeight = math.clamp(measured.Y + 22, 38, 112)
+
+    local stack = LocalBubbleStacks[player]
+    if not stack then
+        stack = {}
+        LocalBubbleStacks[player] = stack
+    end
+
+    -- Match Roblox's practical bubble-stack limit so spam does not create
+    -- an unlimited amount of BillboardGuis.
+    while #stack >= LOCAL_BUBBLE_MAX_STACK do
+        local oldest = table.remove(stack, #stack)
+        if oldest and oldest.Parent then
+            LocalBubbleTokens[oldest] = nil
+            LocalBubbleDisconnect(oldest)
+            oldest:Destroy()
+        end
+    end
+
+    local bubble = Instance.new("BillboardGui")
+    bubble.Name = "KronosLocalChatBubble"
+    bubble.Adornee = head
+    bubble.Size = UDim2.fromOffset(bubbleWidth, bubbleHeight)
+    bubble.StudsOffset = Vector3.new(0, LOCAL_BUBBLE_OFFSET_START, 0)
+    bubble.AlwaysOnTop = true
+    bubble.LightInfluence = 0
+    bubble.MaxDistance = 150
+    bubble.ResetOnSpawn = false
+    bubble.Parent = LocalBubbleFolder
+
+    local frame = Instance.new("Frame")
+    frame.Name = "BubbleFrame"
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(5, 5, 7)
+    frame.BackgroundTransparency = 0.18
+    frame.BorderSizePixel = 0
+    frame.Parent = bubble
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
+
+    -- Subtle inner glass highlight.
+    local inner = Instance.new("Frame")
+    inner.Name = "GlassHighlight"
+    inner.Size = UDim2.new(1, -6, 1, -6)
+    inner.Position = UDim2.fromOffset(3, 3)
+    inner.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+    inner.BackgroundTransparency = 0.62
+    inner.BorderSizePixel = 0
+    inner.ZIndex = 1
+    inner.Parent = frame
+
+    local innerCorner = Instance.new("UICorner")
+    innerCorner.CornerRadius = UDim.new(0, 9)
+    innerCorner.Parent = inner
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "BubbleStroke"
+    stroke.Thickness = 2.4
+    stroke.Transparency = 0.02
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Parent = frame
 
     local gradient = Instance.new("UIGradient")
+    gradient.Name = "RedBlackGradient"
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(0.28, Color3.fromRGB(80, 0, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 20, 20)),
-        ColorSequenceKeypoint.new(0.72, Color3.fromRGB(80, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 20, 20)),
+        ColorSequenceKeypoint.new(0.22, Color3.fromRGB(100, 0, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(5, 5, 5)),
+        ColorSequenceKeypoint.new(0.78, Color3.fromRGB(100, 0, 0)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 20, 20)),
     })
-    gradient.Offset = Vector2.new(-1, 0)
-    gradient.Parent = outer
-
-    local glass = Instance.new("Frame")
-    glass.Name = "BlackGlass"
-    glass.Size = UDim2.new(1, -4, 1, -4)
-    glass.Position = UDim2.new(0, 2, 0, 2)
-    glass.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-    glass.BackgroundTransparency = 0.08
-    glass.BorderSizePixel = 0
-    glass.Parent = outer
-
-    local glassCorner = Instance.new("UICorner")
-    glassCorner.CornerRadius = UDim.new(0, 10)
-    glassCorner.Parent = glass
-
-    local shine = Instance.new("Frame")
-    shine.Size = UDim2.new(1, -4, 0, 8)
-    shine.Position = UDim2.new(0, 2, 0, 2)
-    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    shine.BackgroundTransparency = 0.94
-    shine.BorderSizePixel = 0
-    shine.Parent = glass
-
-    local shineCorner = Instance.new("UICorner")
-    shineCorner.CornerRadius = UDim.new(0, 8)
-    shineCorner.Parent = shine
+    gradient.Parent = stroke
 
     local label = Instance.new("TextLabel")
     label.Name = "BubbleText"
-    label.Size = UDim2.new(1, -16, 1, -12)
-    label.Position = UDim2.new(0, 8, 0, 6)
+    label.Size = UDim2.new(1, -18, 1, -14)
+    label.Position = UDim2.fromOffset(9, 6)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamBold
-    label.Text = text
+    label.Text = messageText
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = textSize
+    label.TextSize = LOCAL_BUBBLE_TEXT_SIZE
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Parent = glass
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextStrokeTransparency = 0.65
+    label.ZIndex = 3
+    label.Parent = frame
 
-    -- Small tail, matching the dark glass bubble instead of the default Roblox fill.
+    -- Small downward tail, keeping the silhouette recognisable as a chat
+    -- bubble rather than a generic BillboardGui panel.
     local tail = Instance.new("Frame")
     tail.Name = "BubbleTail"
-    tail.Size = UDim2.new(0, 10, 0, 10)
-    tail.Position = UDim2.new(0.5, -5, 1, -7)
+    tail.Size = UDim2.fromOffset(11, 11)
+    tail.Position = UDim2.new(0.5, -5, 1, -5)
     tail.Rotation = 45
-    tail.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+    tail.BackgroundColor3 = Color3.fromRGB(5, 5, 7)
+    tail.BackgroundTransparency = 0.18
     tail.BorderSizePixel = 0
-    tail.Parent = bb
+    tail.ZIndex = 0
+    tail.Parent = bubble
 
-    ActiveChatBubbles[targetPlayer] = {Gui = bb}
+    local tailCorner = Instance.new("UICorner")
+    tailCorner.CornerRadius = UDim.new(0, 2)
+    tailCorner.Parent = tail
 
-    task.spawn(function()
-        while bb.Parent do
-            gradient.Offset = Vector2.new(-1, 0)
-            local tween = TweenService:Create(gradient, TweenInfo.new(0.55, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
-            tween:Play()
-            tween.Completed:Wait()
+    local tailStroke = Instance.new("UIStroke")
+    tailStroke.Name = "TailStroke"
+    tailStroke.Thickness = 1.5
+    tailStroke.Transparency = 0.02
+    tailStroke.Color = Color3.fromRGB(255, 30, 30)
+    tailStroke.Parent = tail
+
+    local token = tostring(os.clock()) .. "_" .. tostring(math.random(100000, 999999))
+    LocalBubbleTokens[bubble] = token
+
+    -- Index 1 is always the newest bubble, so it remains closest to the head.
+    table.insert(stack, 1, bubble)
+    LocalBubbleReflow(player)
+
+    -- Fast, continuous red/black border animation, intentionally using the
+    -- same RenderStepped style as the main Kronos GUI border animation.
+    LocalBubbleConnections[bubble] = RunService.RenderStepped:Connect(function(dt)
+        if not bubble.Parent then
+            LocalBubbleDisconnect(bubble)
+            return
         end
+
+        gradient.Rotation = (gradient.Rotation + (LOCAL_BUBBLE_BORDER_SPEED * dt)) % 360
+
+        local pulse = (math.sin(os.clock() * 7) + 1) * 0.5
+        stroke.Thickness = 2.15 + (pulse * 0.7)
     end)
 
-    task.delay(7.0, function()
-        if not bb.Parent then return end
-        local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(glass, fade, {BackgroundTransparency = 1}):Play()
-        TweenService:Create(label, fade, {TextTransparency = 1}):Play()
-        TweenService:Create(outer, fade, {BackgroundTransparency = 1}):Play()
-        TweenService:Create(tail, fade, {BackgroundTransparency = 1}):Play()
-        task.wait(0.36)
-        if bb.Parent then bb:Destroy() end
-        if ActiveChatBubbles[targetPlayer] and ActiveChatBubbles[targetPlayer].Gui == bb then
-            ActiveChatBubbles[targetPlayer] = nil
-        end
+    task.delay(LOCAL_BUBBLE_LIFETIME, function()
+        LocalBubbleFadeAndDestroy(player, bubble, token)
     end)
+
+    return bubble
 end
+
+local function LocalBubbleShouldRender(msgData)
+    if type(msgData) ~= "table" then return false end
+    if msgData.IsPrivate then return false end
+    if msgData.IsJoinMessage then return false end
+    if msgData.Announcement then return false end
+    if msgData.SystemMessage then return false end
+    if msgData.MuteAction then return false end
+
+    local text = tostring(msgData.Text or "")
+    if text == "" or text:match("^%s*$") then return false end
+
+    -- Sticker payloads are visual assets, not text chat bubbles.
+    if string.sub(text, 1, 11) == "rbxthumb://" then return false end
+    if string.sub(text, 1, 13) == "rbxassetid://" then return false end
+
+    return true
+end
+
+local function LocalBubbleRenderMessage(msgData, messageId)
+    if not LocalBubbleShouldRender(msgData) then return end
+
+    local sender = LocalBubbleGetPlayer(
+        msgData.Username,
+        msgData.UserId,
+        msgData.DisplayName
+    )
+
+    if not sender then
+        -- A character may still be spawning when Firebase delivers the
+        -- message. Retry briefly without blocking the chat system.
+        task.spawn(function()
+            for _ = 1, 10 do
+                task.wait(0.25)
+                if not LocalBubbleShouldRender(msgData) then return end
+
+                sender = LocalBubbleGetPlayer(
+                    msgData.Username,
+                    msgData.UserId,
+                    msgData.DisplayName
+                )
+
+                if sender then
+                    LocalBubbleCreate(sender, msgData.Text, messageId)
+                    return
+                end
+            end
+        end)
+        return
+    end
+
+    LocalBubbleCreate(sender, msgData.Text, messageId)
+end
+
+Players.PlayerRemoving:Connect(function(player)
+    local stack = LocalBubbleStacks[player]
+    if stack then
+        for _, bubble in ipairs(stack) do
+            LocalBubbleTokens[bubble] = nil
+            LocalBubbleDisconnect(bubble)
+            if bubble and bubble.Parent then
+                bubble:Destroy()
+            end
+        end
+    end
+    LocalBubbleStacks[player] = nil
+end)
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterRemoving:Connect(function()
+        local stack = LocalBubbleStacks[player]
+        if stack then
+            for _, bubble in ipairs(stack) do
+                LocalBubbleTokens[bubble] = nil
+                LocalBubbleDisconnect(bubble)
+                if bubble and bubble.Parent then
+                    bubble:Destroy()
+                end
+            end
+            LocalBubbleStacks[player] = nil
+        end
+    end)
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    local stack = LocalBubbleStacks[LocalPlayer]
+    if stack then
+        for _, bubble in ipairs(stack) do
+            LocalBubbleTokens[bubble] = nil
+            LocalBubbleDisconnect(bubble)
+            if bubble and bubble.Parent then
+                bubble:Destroy()
+            end
+        end
+        LocalBubbleStacks[LocalPlayer] = nil
+    end
+end)
 
 CreateMessageCard = function(msgData, isGlobal)
     local frame = Instance.new("Frame")
@@ -3168,35 +3214,6 @@ CreateMessageCard = function(msgData, isGlobal)
 
     local roleName = msgData.Role or GetAssignedOrCalculatedRole(msgData.Username)
     local style = RANK_STYLES[roleName] or RANK_STYLES["VIP"]
-
-    if msgData.IsSpecialJoinAnnouncement then
-        frame.Name = "SpecialJoinAnnouncement"
-        frame.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-        frame.BackgroundTransparency = 0.08
-
-        local specialStroke = Instance.new("UIStroke")
-        specialStroke.Name = "SpecialJoinStroke"
-        specialStroke.Thickness = 2
-        specialStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        specialStroke.Parent = frame
-
-        local specialGradient = Instance.new("UIGradient")
-        specialGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, style.Start or Color3.new(1,1,1)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(1, style.End or style.Start or Color3.new(1,1,1)),
-        })
-        specialGradient.Parent = specialStroke
-
-        task.spawn(function()
-            while frame.Parent and specialStroke.Parent do
-                specialGradient.Rotation = (specialGradient.Rotation + 90) % 360
-                task.wait(0.04)
-            end
-        end)
-
-        msgPfpImg.Image = "rbxthumb://type=Asset&id=" .. tostring(msgData.PfpId or DefaultPfpId) .. "&w=150&h=150"
-    end
 
     local tagLabel = Instance.new("TextLabel")
     tagLabel.Name = "RoleTag"
@@ -3341,27 +3358,16 @@ CreateMessageCard = function(msgData, isGlobal)
         contentLabel.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
         contentLabel.AutomaticSize = Enum.AutomaticSize.Y
         contentLabel.BackgroundTransparency = 1
-        contentLabel.Font = Enum.Font.GothamBold
+        contentLabel.Font = Enum.Font.Gotham
         contentLabel.Text = msgData.Text
-
-        -- Every chat message uses the announcement typography: GothamBold, 12px.
-        -- Announcement styling remains highest priority, followed by special-role
-        -- message colours, then the existing private/default chat colours.
-        local roleMessageColor = CHAT_MESSAGE_TEXT_COLORS[msgData.Role]
-        if msgData.IsSpecialJoinAnnouncement then
-            contentLabel.TextColor3 = style.Name or Color3.fromRGB(255, 255, 255)
-            contentLabel.Font = Enum.Font.GothamBlack
-            contentLabel.TextSize = 13
-        elseif msgData.Announcement then
+        contentLabel.TextColor3 = msgData.IsPrivate and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(230, 230, 240)
+        if msgData.Announcement then
+            -- Announcement text is intentionally static Neon Yellow (not rainbow).
             contentLabel.TextColor3 = ANNOUNCEMENT_TEXT_COLOR
-        elseif roleMessageColor then
-            contentLabel.TextColor3 = roleMessageColor
-        elseif msgData.IsPrivate then
-            contentLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
+            contentLabel.TextSize = ANNOUNCEMENT_TEXT_SIZE
         else
-            contentLabel.TextColor3 = Color3.fromRGB(230, 230, 240)
+            contentLabel.TextSize = 11
         end
-        contentLabel.TextSize = CHAT_MESSAGE_TEXT_SIZE
         contentLabel.TextXAlignment = Enum.TextXAlignment.Left
         contentLabel.TextYAlignment = Enum.TextYAlignment.Top
         contentLabel.TextWrapped = true
@@ -3491,7 +3497,6 @@ Moderation.RenderLocalMessage = function(payload, isGlobal)
     local card = CreateMessageCard(payload, isGlobal)
     card.Visible = (ActiveTab == (isGlobal and "GLOBAL" or "SERVER"))
     table.insert(ui, card)
-    RenderCustomChatBubble(payload)
 end
 
 Moderation.SendAnnouncement = function(body)
@@ -3698,7 +3703,7 @@ SendChatMessage = function()
         ConsecutiveSpamCount = 1
     end
 
-    if ConsecutiveSpamCount >= 2 then
+    if ConsecutiveSpamCount >= 3 then
         ShowAntiSpamMessage()
         MessageInput.Text = ""
         return
@@ -3736,7 +3741,7 @@ SendChatMessage = function()
     local immediateCard = CreateMessageCard(payload, ActiveTab == "GLOBAL")
     immediateCard.Visible = true
     table.insert(localUI, immediateCard)
-    pcall(RenderCustomChatBubble, payload)
+    LocalBubbleRenderMessage(payload, clientMessageId)
 
     MessageInput.Text = ""
     ReplyContextMessage = nil
@@ -3787,28 +3792,12 @@ MessageInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then SendChatMessage() end
 end)
 
-local SPECIAL_JOIN_ROLES = {
-    ["Architect"] = true,
-    ["Overseer"] = true,
-    ["Moderator"] = true,
-    ["Dev-Contributor"] = true,
-    ["Hacker"] = true,
-}
-
-local SPECIAL_JOIN_COPY = {
-    ["Architect"] = "THE ARCHITECT HAS ENTERED THE SERVER",
-    ["Overseer"] = "THE OVERSEER HAS ARRIVED",
-    ["Moderator"] = "A MODERATOR HAS JOINED THE SERVER",
-    ["Dev-Contributor"] = "A DEV-CONTRIBUTOR HAS ENTERED THE SERVER",
-    ["Hacker"] = "THE HACKER HAS ENTERED THE SERVER",
-}
-
-local function BuildNormalJoinMessagePayload()
+function BuildJoinMessagePayload()
     return {
         Username = "AI_MoD",
         DisplayName = "AI MoD",
-        JoinedDisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = GetFormattedDisplayName(LocalPlayer.DisplayName, true) .. " has Joined the Server Chat",
+        JoinedDisplayName = LocalPlayer.DisplayName,
+        Text = LocalPlayer.DisplayName .. " has Joined the Server Chat",
         Timestamp = os.time(),
         Role = "BOT",
         PfpId = 78588114275746,
@@ -3818,34 +3807,11 @@ local function BuildNormalJoinMessagePayload()
     }
 end
 
-local function BuildSpecialJoinMessagePayload()
-    local highestRole = GetHighestRole(LocalPlayer.Name)
-    if not SPECIAL_JOIN_ROLES[highestRole] then
-        return nil
-    end
+function ShowLocalJoinMessage()
+    local payload = BuildJoinMessagePayload()
+    local localId = "local_join_" .. JoinEventId
 
-    return {
-        Username = "__SPECIAL_JOIN__",
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        JoinedDisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = SPECIAL_JOIN_COPY[highestRole] or (string.upper(highestRole) .. " HAS ENTERED THE SERVER"),
-        Timestamp = os.time(),
-        Role = highestRole,
-        PfpId = CurrentPfpId,
-        IsPrivate = false,
-        IsJoinMessage = true,
-        IsSpecialJoinAnnouncement = true,
-        SpecialJoinRole = highestRole,
-        JoinEventId = JoinEventId,
-    }
-end
-
-function BuildJoinMessagePayload()
-    return BuildNormalJoinMessagePayload()
-end
-
-local function RenderLocalJoinPayload(payload, localId)
-    if not payload then return end
+    -- Immediate local render: the joining client does not wait for Firebase.
     ServerCachedMessages[localId] = payload
     local card = CreateMessageCard(payload, false)
     card.Visible = (ActiveTab == "SERVER")
@@ -3853,26 +3819,10 @@ local function RenderLocalJoinPayload(payload, localId)
     DisplayNewMessageNotif(payload, localId)
 end
 
-function ShowLocalJoinMessage()
-    -- Special role announcement is deliberately a separate system-style card.
-    local special = BuildSpecialJoinMessagePayload()
-    if special then
-        RenderLocalJoinPayload(special, "local_special_join_" .. JoinEventId)
-    end
-
-    -- Every player still receives the ordinary join message immediately after it.
-    RenderLocalJoinPayload(BuildNormalJoinMessagePayload(), "local_join_" .. JoinEventId)
-end
-
 function PostServerJoinMessage()
-    local special = BuildSpecialJoinMessagePayload()
-    local normal = BuildNormalJoinMessagePayload()
+    local payload = BuildJoinMessagePayload()
     task.spawn(function()
-        if special then
-            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", special)
-        end
-        task.wait(0.05)
-        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", normal)
+        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
     end)
 end
 
@@ -3901,8 +3851,8 @@ function PollMessages()
                         local card = CreateMessageCard(msg, true)
                         card.Visible = (ActiveTab == "GLOBAL")
                         table.insert(GlobalUIElements, card)
-                        pcall(RenderCustomChatBubble, msg)
                         DisplayNewMessageNotif(msg)
+                        LocalBubbleRenderMessage(msg, id)
                     end
                     end
                 end
@@ -3931,8 +3881,8 @@ function PollMessages()
                         local card = CreateMessageCard(msg, false)
                         card.Visible = (ActiveTab == "SERVER")
                         table.insert(ServerUIElements, card)
-                        pcall(RenderCustomChatBubble, msg)
                         DisplayNewMessageNotif(msg)
+                        LocalBubbleRenderMessage(msg, id)
                     end
                     end
                 end
@@ -3945,7 +3895,6 @@ end
 
 task.spawn(function()
     task.wait(0.5)
-    pcall(FetchRemoteRoles)
     ShowLocalJoinMessage()
     task.wait(0.25)
     PostServerJoinMessage()
@@ -3959,5 +3908,3 @@ function KronosProtectedSpoofRole(name)
     name = tostring(name or ""):lower()
     return name == "architect" or name == "overseer"
 end
-
--- KRONOS script end: all functions and control blocks are intentionally closed.
