@@ -935,6 +935,11 @@ Moderation.RefreshAllRoleAutocomplete = function()
     for rankName, _ in pairs(RANK_STYLES) do
         optionsMap[rankName] = true
     end
+
+    -- Always show free ranks in autocomplete even when absent from the roster.
+    for rankName, _ in pairs(FREE_ROLE_INDEX) do
+        optionsMap[rankName] = true
+    end
    
     for playerName, roles in pairs(AvailableUserRoles) do
         for _, roleName in ipairs(roles) do
@@ -1006,6 +1011,15 @@ local ROLE_PRIORITY = {
 
 local ROLE_PRIORITY_INDEX = {}
 for index, roleName in ipairs(ROLE_PRIORITY) do ROLE_PRIORITY_INDEX[roleName] = index end
+
+-- Free ranks: Manipulator😈 and every rank below it in ROLE_PRIORITY are available to everyone.
+local FREE_ROLE_START_INDEX = ROLE_PRIORITY_INDEX["Manipulator😈"] or math.huge
+local FREE_ROLE_INDEX = {}
+for index, roleName in ipairs(ROLE_PRIORITY) do
+    if index >= FREE_ROLE_START_INDEX then
+        FREE_ROLE_INDEX[roleName] = true
+    end
+end
 
 local ROLE_PERMISSIONS = {
     ["Architect"] = {Spoof=true, Announce=true, Kick=true, Ban=true, Mute=true, PlayMusic=true},
@@ -2767,22 +2781,6 @@ CreateMessageCard = function(msgData, isGlobal)
     local roleName = msgData.Role or GetAssignedOrCalculatedRole(msgData.Username)
     local style = RANK_STYLES[roleName] or RANK_STYLES["VIP"]
 
-    -- Private-message prefix: only private messages get this extra label.
-    local privatePrefixLabel = nil
-    if msgData.IsPrivate then
-        privatePrefixLabel = Instance.new("TextLabel")
-        privatePrefixLabel.Name = "PrivateWhisperPrefix"
-        privatePrefixLabel.AutomaticSize = Enum.AutomaticSize.X
-        privatePrefixLabel.Size = UDim2.new(0, 0, 0, 18)
-        privatePrefixLabel.Position = UDim2.new(0, 38, 0, 5)
-        privatePrefixLabel.BackgroundTransparency = 1
-        privatePrefixLabel.Font = Enum.Font.GothamBold
-        privatePrefixLabel.Text = "Pvt Whisper from -> "
-        privatePrefixLabel.TextColor3 = Color3.fromRGB(255, 105, 180)
-        privatePrefixLabel.TextSize = 9
-        privatePrefixLabel.Parent = frame
-    end
-
     local tagLabel = Instance.new("TextLabel")
     tagLabel.Name = "RoleTag"
     tagLabel.AutomaticSize = Enum.AutomaticSize.X
@@ -2810,7 +2808,7 @@ CreateMessageCard = function(msgData, isGlobal)
     nameLabel.Name = "NameLabel"
     nameLabel.AutomaticSize = Enum.AutomaticSize.X
     nameLabel.Size = UDim2.new(0, 0, 0, 18)
-    nameLabel.Position = UDim2.new(0, 38, 0, 5)
+    nameLabel.Position = tagLabel.Visible and UDim2.new(0, tagLabel.AbsoluteSize.X + 44, 0, 5) or UDim2.new(0, 38, 0, 5)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.Text = formattedName .. ":"
@@ -2818,28 +2816,13 @@ CreateMessageCard = function(msgData, isGlobal)
     nameLabel.TextSize = 11
     nameLabel.Parent = frame
 
-    local function UpdatePrivateHeaderLayout()
-        local prefixWidth = privatePrefixLabel and privatePrefixLabel.AbsoluteSize.X or 0
-        local startX = privatePrefixLabel and (38 + prefixWidth + 4) or 38
-
-        if privatePrefixLabel then
-            privatePrefixLabel.Position = UDim2.new(0, 38, 0, 5)
-        end
-
+    tagLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         if tagLabel.Visible then
-            tagLabel.Position = UDim2.new(0, startX, 0, 5)
-            nameLabel.Position = UDim2.new(0, startX + tagLabel.AbsoluteSize.X + 6, 0, 5)
+            nameLabel.Position = UDim2.new(0, tagLabel.AbsoluteSize.X + 44, 0, 5)
         else
-            tagLabel.Position = UDim2.new(0, startX, 0, 5)
-            nameLabel.Position = UDim2.new(0, startX, 0, 5)
+            nameLabel.Position = UDim2.new(0, 38, 0, 5)
         end
-    end
-
-    tagLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePrivateHeaderLayout)
-    if privatePrefixLabel then
-        privatePrefixLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePrivateHeaderLayout)
-    end
-    UpdatePrivateHeaderLayout()
+    end)
 
     if msgData.ReplyToText and msgData.ReplyToText ~= "" then
         local replyBox = Instance.new("Frame")
@@ -2938,7 +2921,7 @@ CreateMessageCard = function(msgData, isGlobal)
         local contentLabel = Instance.new("TextLabel")
         contentLabel.Name = "ContentLabel"
         contentLabel.Size = UDim2.new(1, -48, 0, 0)
-        contentLabel.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or (msgData.IsPrivate and 26 or 24))
+        contentLabel.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
         contentLabel.AutomaticSize = Enum.AutomaticSize.Y
         contentLabel.BackgroundTransparency = 1
         contentLabel.Font = Enum.Font.Gotham
@@ -3221,7 +3204,9 @@ SendChatMessage = function()
     elseif not isPrivate and string.sub(typedText, 1, 5) == "!tag " then
         local requestedRole = string.sub(typedText, 6):gsub("^%s+", ""):gsub("%s+$", "")
         local canonical = FindCanonicalRole(requestedRole)
-        if not canonical or not PlayerHasRole(LocalPlayer.Name, canonical) then
+        if not canonical then
+            ShowLocalSystemMessage("[AI MoD] : Command failed. Unknown role '" .. requestedRole .. "'.", true)
+        elseif not FREE_ROLE_INDEX[canonical] and not PlayerHasRole(LocalPlayer.Name, canonical) then
             ShowLocalSystemMessage("[AI MoD] : Command failed. You are not assigned to the role '" .. requestedRole .. "' in the GitHub roster.", true)
         else
             AssignedPlayerRoles[LocalPlayer.Name] = canonical
