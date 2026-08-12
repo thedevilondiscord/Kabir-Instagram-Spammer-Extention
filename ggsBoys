@@ -937,10 +937,10 @@ Moderation.RefreshAllRoleAutocomplete = function()
     end
 
     -- Always show free ranks in autocomplete even when absent from the roster.
-    for rankName, _ in pairs(FREE_ROLE_INDEX) do
+    for rankName, _ in pairs(FREE_ROLE_AUTOCOMPLETE_OPTIONS) do
         optionsMap[rankName] = true
     end
-   
+
     for playerName, roles in pairs(AvailableUserRoles) do
         for _, roleName in ipairs(roles) do
             optionsMap[roleName] = true
@@ -1019,6 +1019,12 @@ for index, roleName in ipairs(ROLE_PRIORITY) do
     if index >= FREE_ROLE_START_INDEX then
         FREE_ROLE_INDEX[roleName] = true
     end
+end
+
+-- Keep all free ranks available to the autocomplete system.
+local FREE_ROLE_AUTOCOMPLETE_OPTIONS = {}
+for rankName, _ in pairs(FREE_ROLE_INDEX) do
+    FREE_ROLE_AUTOCOMPLETE_OPTIONS[rankName] = true
 end
 
 local ROLE_PERMISSIONS = {
