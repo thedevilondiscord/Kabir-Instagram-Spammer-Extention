@@ -8,7 +8,6 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 local ContentProvider = game:GetService("ContentProvider")
-local TextService = game:GetService("TextService")
 
 local LocalPlayer = Players.LocalPlayer
 local lplr = LocalPlayer
@@ -1399,6 +1398,7 @@ SettingsPanel.BackgroundTransparency = 0.08
 SettingsPanel.BorderSizePixel = 0
 SettingsPanel.Visible = false
 SettingsPanel.ZIndex = 100
+SettingsPanel.Active = true
 SettingsPanel.Parent = MainFrame
 
 local SettingsPanelCorner = Instance.new("UICorner")
@@ -2963,9 +2963,10 @@ local function RenderCustomChatBubble(msgData)
     local maxWidth = 270
     local horizontalPadding = 20
     local textSize = 14
-    local measured = TextService:GetTextSize(text, textSize, Enum.Font.GothamBold, Vector2.new(maxWidth - horizontalPadding, 1000))
-    local bubbleWidth = math.clamp(measured.X + horizontalPadding, 70, maxWidth)
-    local bubbleHeight = math.clamp(measured.Y + 16, 34, 100)
+    local lineCapacity = 28
+    local estimatedLines = math.max(1, math.ceil(#text / lineCapacity))
+    local bubbleWidth = math.clamp(math.min(maxWidth, 70 + math.min(#text, lineCapacity) * 6), 90, maxWidth)
+    local bubbleHeight = math.clamp(34 + ((estimatedLines - 1) * 17), 34, 100)
 
     local bb = Instance.new("BillboardGui")
     bb.Name = "KronosBlackGlassBubble"
@@ -3637,7 +3638,7 @@ SendChatMessage = function()
     local immediateCard = CreateMessageCard(payload, ActiveTab == "GLOBAL")
     immediateCard.Visible = true
     table.insert(localUI, immediateCard)
-    RenderCustomChatBubble(payload)
+    pcall(RenderCustomChatBubble, payload)
 
     MessageInput.Text = ""
     ReplyContextMessage = nil
@@ -3747,7 +3748,7 @@ function PollMessages()
                         local card = CreateMessageCard(msg, true)
                         card.Visible = (ActiveTab == "GLOBAL")
                         table.insert(GlobalUIElements, card)
-                        RenderCustomChatBubble(msg)
+                        pcall(RenderCustomChatBubble, msg)
                         DisplayNewMessageNotif(msg)
                     end
                     end
@@ -3777,7 +3778,7 @@ function PollMessages()
                         local card = CreateMessageCard(msg, false)
                         card.Visible = (ActiveTab == "SERVER")
                         table.insert(ServerUIElements, card)
-                        RenderCustomChatBubble(msg)
+                        pcall(RenderCustomChatBubble, msg)
                         DisplayNewMessageNotif(msg)
                     end
                     end
