@@ -23,10 +23,6 @@ local ScriptStartTime = os.time()
 local MessageInput = nil
 local SendChatMessage = nil
 local CreateMessageCard = nil
-local ShowSpecialJoinAnnouncement = nil
-local GetSpecialJoinDefinitionForRole = nil
-local GetHighestSpecialJoinDefinition = nil
-local BuildSpecialJoinEvent = nil
 
 -- Anti-Spam Tracking State
 local LastSentMessageText = ""
@@ -474,29 +470,6 @@ local JOIN_SOUND_ID = "rbxassetid://7460825623"
 local NOTIFICATION_SOUND_ID = "rbxassetid://107978604605265"
 local JoinEventId = LocalPlayer.UserId .. "_" .. tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999))
 
--- ============================================================================
--- SPECIAL ROLE JOIN ANNOUNCEMENT CONFIGURATION
--- ============================================================================
-local SPECIAL_JOIN_EVENTS_ENDPOINT = SERVER_FIREBASE_URL .. "server_chat_events/" .. SERVER_JOB_ID .. ".json"
-
-local SPECIAL_JOIN_DEFINITIONS = {
-    {Role="Architect", Label="Architect", Accent=Color3.fromRGB(255,70,45), Text="Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect %s has descended into the Server Chat. (%s)"},
-    {Role="Overseer", Label="Overseer", Accent=Color3.fromRGB(70,190,255), Text="A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer %s is now watching the Server Chat. (%s)"},
-    {Role="Moderator", Label="Moderator", Accent=Color3.fromRGB(255,170,55), Text="The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator %s has stepped into the Server Chat. (%s)"},
-    {Role="Developer", Label="Developer", Accent=Color3.fromRGB(40,225,215), Text="The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer %s has spawned into the Server Chat. (%s)"},
-    {Role="Hacker", Label="Hacker", Accent=Color3.fromRGB(110,255,100), Text="Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker %s has breached the Server Chat. (%s)"},
-    {Role="One of the OGs👑", Label="One of the OGs👑", Accent=Color3.fromRGB(255,215,70), Text="A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 %s has graced the Server Chat. (%s)"},
-    {Role="COM-GOD⛓️", Label="COM-GOD⛓️", Accent=Color3.fromRGB(220,220,220), Text="An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ %s has dominated the Server Chat. (%s)"},
-    {Role="Regent of Clan🔥", Label="Regent of Clan🔥", Accent=Color3.fromRGB(255,90,45), Text="The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 %s has set the Server Chat ablaze. (%s)"},
-    {Role="Disbander", Label="Disbander", Accent=Color3.fromRGB(125,55,190), Text="The foundations of every alliance begin to tremble as names, loyalties, and banners are erased without warning . . . Disbander %s has arrived to dismantle the Server Chat. (%s)"},
-    {Role="Carnage🩸", Label="Carnage", Accent=Color3.fromRGB(210,35,55), Text="A wave of crimson dread sweeps through the channel as the silence before the slaughter gives way to absolute chaos . . . Carnage %s has entered the Server Chat. (%s)"},
-}
-local SPECIAL_JOIN_BY_ROLE = {}
-for _, def in ipairs(SPECIAL_JOIN_DEFINITIONS) do
-    SPECIAL_JOIN_BY_ROLE[string.lower(def.Role)] = def
-end
-
-
 local ActiveTab = "GLOBAL"
 
 -- ============================================================================
@@ -790,6 +763,7 @@ local RANK_STYLES = {
     ["One of the OGs👑"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(100, 45, 0), Name = Color3.fromRGB(255, 230, 80), Speed = 1.0 },
     ["COM-GOD⛓️"] = { Start = Color3.fromRGB(220, 220, 220), End = Color3.fromRGB(40, 40, 40), Name = Color3.fromRGB(245, 245, 245), Speed = 1.1 },
     ["Regent of Clan🔥"] = { Start = Color3.fromRGB(255, 100, 0), End = Color3.fromRGB(90, 0, 0), Name = Color3.fromRGB(255, 150, 40), Speed = 1.0 },
+    ["Disbander"] = { Start = Color3.fromRGB(170, 255, 0), End = Color3.fromRGB(40, 90, 0), Name = Color3.fromRGB(190, 255, 40), Speed = 1.0 },
     ["Carnage🩸"] = { Start = Color3.fromRGB(220, 0, 0), End = Color3.fromRGB(60, 0, 0), Name = Color3.fromRGB(255, 50, 50), Speed = 1.0 },
     ["Psychopath💀"] = { Start = Color3.fromRGB(190, 40, 80), End = Color3.fromRGB(50, 0, 20), Name = Color3.fromRGB(255, 80, 120), Speed = 0.8 },
     ["Manipulator😈"] = { Start = Color3.fromRGB(170, 70, 255), End = Color3.fromRGB(40, 0, 80), Name = Color3.fromRGB(210, 120, 255), Speed = 0.9 },
@@ -877,8 +851,6 @@ local PersistentPvtPrefix = ""
 
 local GlobalCachedMessages, GlobalUIElements = {}, {}
 local ServerCachedMessages, ServerUIElements = {}, {}
-local ShownSpecialJoinEventIds = {}
-local SpecialJoinUIElements = {}
 
 -- Moderation state. Mutes are scoped to GLOBAL or SERVER chat and expire automatically.
 local Moderation = { ActiveMutes = {} }
@@ -1049,6 +1021,12 @@ local function RoleNameEquals(a, b)
 end
 
 local function FindCanonicalRole(roleName)
+    local normalized = string.lower(tostring(roleName or "")):gsub("^%s+", ""):gsub("%s+$", "")
+    -- Accept the requested short test/roster name while retaining the existing
+    -- canonical role used by the current GitHub roster and role styles.
+    if normalized == "carnage" then
+        return "Carnage🩸"
+    end
     for _, candidate in ipairs(ROLE_PRIORITY) do
         if RoleNameEquals(candidate, roleName) then return candidate end
     end
@@ -1085,6 +1063,118 @@ local function GetAssignedOrCalculatedRole(username)
         return FindCanonicalRole(selected) or selected
     end
     return GetHighestRole(username)
+end
+
+-- ============================================================================
+-- SPECIAL JOIN ANNOUNCEMENTS
+-- The first matching role in this list wins. These are intentionally separate
+-- from the normal role hierarchy so BOT or other roles can never override a
+-- special join announcement.
+-- ============================================================================
+local SPECIAL_JOIN_PRIORITY = {
+    "Architect",
+    "Overseer",
+    "Moderator",
+    "Developer",
+    "Hacker",
+    "One of the OGs👑",
+    "COM-GOD⛓️",
+    "Regent of Clan🔥",
+    "Disbander",
+    "Carnage🩸",
+}
+
+local SPECIAL_JOIN_DEFINITIONS = {
+    ["Architect"] = {
+        Template = "Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect [PlayerName] has descended into the Server Chat. (Username)",
+        Start = Color3.fromRGB(255, 0, 0),
+        End = Color3.fromRGB(80, 0, 0),
+        Bold = true,
+        Speed = 0.9,
+    },
+    ["Overseer"] = {
+        Template = "A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer [PlayerName] is now watching the Server Chat. (Username)",
+        Start = Color3.fromRGB(255, 0, 0),
+        End = Color3.fromRGB(70, 0, 0),
+        Bold = true,
+        Speed = 0.9,
+    },
+    ["Moderator"] = {
+        Template = "The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator [PlayerName] has stepped into the Server Chat. (Username)",
+        Start = Color3.fromRGB(190, 0, 255),
+        End = Color3.fromRGB(0, 100, 255),
+        Bold = true,
+        Speed = 0.85,
+    },
+    ["Developer"] = {
+        Template = "The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer [PlayerName] has spawned into the Server Chat. (Username)",
+        Start = Color3.fromRGB(0, 255, 255),
+        End = Color3.fromRGB(0, 80, 120),
+        Bold = false,
+        Speed = 0.9,
+    },
+    ["Hacker"] = {
+        Template = "Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker [PlayerName] has breached the Server Chat. (Username)",
+        Start = Color3.fromRGB(255, 40, 40),
+        End = Color3.fromRGB(90, 0, 0),
+        Bold = false,
+        Speed = 0.9,
+    },
+    ["One of the OGs👑"] = {
+        Template = "A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 [PlayerName] has graced the Server Chat. (Username)",
+        Start = Color3.fromRGB(255, 215, 0),
+        End = Color3.fromRGB(255, 255, 255),
+        Bold = false,
+        Speed = 0.85,
+    },
+    ["COM-GOD⛓️"] = {
+        Template = "An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ [PlayerName] has dominated the Server Chat. (Username)",
+        Start = Color3.fromRGB(255, 120, 0),
+        End = Color3.fromRGB(255, 220, 60),
+        Bold = false,
+        Speed = 0.9,
+    },
+    ["Regent of Clan🔥"] = {
+        Template = "The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 [PlayerName] has set the Server Chat ablaze. (Username)",
+        Start = Color3.fromRGB(255, 120, 0),
+        End = Color3.fromRGB(255, 220, 50),
+        Bold = false,
+        Speed = 0.9,
+    },
+    ["Disbander"] = {
+        Template = "The foundations of every alliance begin to tremble as names, loyalties, and banners are erased without warning . . . Disbander [PlayerName] has arrived to dismantle the Server Chat. (Username)",
+        Start = Color3.fromRGB(180, 255, 0),
+        End = Color3.fromRGB(70, 255, 0),
+        Bold = false,
+        Speed = 0.9,
+    },
+    ["Carnage🩸"] = {
+        Template = "A wave of crimson dread sweeps through the channel as the silence before the slaughter gives way to absolute chaos . . . Carnage [PlayerName] has entered the Server Chat. (Username)",
+        Start = Color3.fromRGB(180, 255, 0),
+        End = Color3.fromRGB(70, 255, 0),
+        Bold = false,
+        Speed = 0.9,
+    },
+}
+
+local function GetHighestSpecialJoinRole(username)
+    for _, specialRole in ipairs(SPECIAL_JOIN_PRIORITY) do
+        if PlayerHasRole(username, specialRole) then
+            return specialRole
+        end
+    end
+    return nil
+end
+
+local function ResolveSpecialJoinRole(requestedRole)
+    local normalized = string.lower(tostring(requestedRole or "")):gsub("^%s+", ""):gsub("%s+$", "")
+    if normalized == "carnage" then return "Carnage🩸" end
+    for _, specialRole in ipairs(SPECIAL_JOIN_PRIORITY) do
+        if string.lower(specialRole) == normalized then
+            return specialRole
+        end
+    end
+    return nil
 end
 
 local function HasRolePermission(username, permission)
@@ -1476,7 +1566,7 @@ ToggleButton.MouseButton1Click:Connect(function()
     SetChatVisibility(not ChatIsShown)
 end)
 
-MessageContainer = Instance.new("ScrollingFrame")
+local MessageContainer = Instance.new("ScrollingFrame")
 MessageContainer.Name = "MessageContainer"
 MessageContainer.Size = UDim2.new(1, -16, 1, -90)
 MessageContainer.Position = UDim2.new(0, 8, 0, 40)
@@ -1496,184 +1586,6 @@ UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     MessageContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 12)
     MessageContainer.CanvasPosition = Vector2.new(0, MessageContainer.CanvasSize.Y.Offset)
 end)
-
--- ============================================================================
--- SPECIAL ROLE JOIN ANNOUNCEMENT RENDERER
--- This is a native client-side event UI. It never uses CreateMessageCard, never
--- creates an AI MoD chat payload, and is synchronized only through the dedicated
--- SERVER-scoped event endpoint.
--- ============================================================================
-GetSpecialJoinDefinitionForRole = function(roleName)
-    local lowered = string.lower(tostring(roleName or ""))
-    local aliases = {
-        ["carnage"] = "carnage🩸",
-        ["com-god"] = "com-god⛓️",
-        ["com god"] = "com-god⛓️",
-        ["one of the ogs"] = "one of the ogs👑",
-        ["regent of clan"] = "regent of clan🔥",
-    }
-    return SPECIAL_JOIN_BY_ROLE[aliases[lowered] or lowered]
-end
-
-GetHighestSpecialJoinDefinition = function(username)
-    local roles = GetPlayerRoles(username)
-    for _, def in ipairs(SPECIAL_JOIN_DEFINITIONS) do
-        for _, role in ipairs(roles) do
-            if RoleNameEquals(role, def.Role) then
-                return def
-            end
-        end
-    end
-    return nil
-end
-
-BuildSpecialJoinEvent = function(username, displayName, definition, eventId, timestamp)
-    if not definition then return nil end
-    local shownName = GetFormattedDisplayName(displayName or username or "Unknown", false)
-    return {
-        EventId=tostring(eventId), JoinEventId=tostring(eventId),
-        Username=tostring(username or "Unknown"), DisplayName=shownName,
-        JoinedDisplayName=shownName, Role=definition.Role, SpecialRole=definition.Role,
-        Text=string.format(definition.Text, shownName, tostring(username or "Unknown")),
-        Timestamp=tonumber(timestamp) or os.time(), Scope="SERVER",
-        IsSpecialJoinAnnouncement=true,
-    }
-end
-
-local function AnimateSpecialJoinRainbow(label)
-    task.spawn(function()
-        local hue=0
-        while label and label.Parent do
-            hue=(hue+0.006)%1
-            label.TextColor3=Color3.fromHSV(hue,0.92,1)
-            RunService.RenderStepped:Wait()
-        end
-    end)
-end
-
-local function CreateSpecialJoinAnnouncement(eventData)
-    if not eventData or not eventData.IsSpecialJoinAnnouncement then return nil end
-    local def=GetSpecialJoinDefinitionForRole(eventData.SpecialRole or eventData.Role)
-    if not def then return nil end
-
-    local holder=Instance.new("Frame")
-    holder.Name="SpecialJoinAnnouncement"
-    holder.Size=UDim2.new(1,-8,0,0)
-    holder.AutomaticSize=Enum.AutomaticSize.Y
-    holder.BackgroundTransparency=1
-    holder.BorderSizePixel=0
-    holder.LayoutOrder=0
-
-    local scale=Instance.new("UIScale",holder)
-    scale.Scale=0.95
-
-    local panel=Instance.new("Frame",holder)
-    panel.Name="AnnouncementPanel"
-    panel.Size=UDim2.new(1,0,0,0)
-    panel.AutomaticSize=Enum.AutomaticSize.Y
-    panel.BackgroundColor3=Color3.fromRGB(13,13,20)
-    panel.BackgroundTransparency=1
-    panel.BorderSizePixel=0
-
-    local corner=Instance.new("UICorner",panel)
-    corner.CornerRadius=UDim.new(0,13)
-
-    local stroke=Instance.new("UIStroke",panel)
-    stroke.Name="AnimatedBorder"
-    stroke.Thickness=2
-    stroke.Color=def.Accent
-    stroke.Transparency=1
-
-    local gloss=Instance.new("Frame",panel)
-    gloss.Size=UDim2.new(1,0,0,24)
-    gloss.BackgroundColor3=Color3.new(1,1,1)
-    gloss.BackgroundTransparency=0.96
-    gloss.BorderSizePixel=0
-
-    local emblem=Instance.new("TextLabel",panel)
-    emblem.Size=UDim2.new(0,34,0,34)
-    emblem.Position=UDim2.new(0,10,0,10)
-    emblem.BackgroundColor3=def.Accent
-    emblem.BackgroundTransparency=1
-    emblem.BorderSizePixel=0
-    emblem.Font=Enum.Font.GothamBold
-    emblem.Text="✦"
-    emblem.TextColor3=Color3.new(1,1,1)
-    emblem.TextSize=17
-    emblem.TextTransparency=1
-
-    local emblemCorner=Instance.new("UICorner",emblem)
-    emblemCorner.CornerRadius=UDim.new(1,0)
-
-    local title=Instance.new("TextLabel",panel)
-    title.Size=UDim2.new(1,-58,0,18)
-    title.Position=UDim2.new(0,52,0,7)
-    title.BackgroundTransparency=1
-    title.Font=Enum.Font.GothamBold
-    title.Text="SPECIAL ARRIVAL  •  "..string.upper(def.Label)
-    title.TextColor3=Color3.fromRGB(215,215,225)
-    title.TextSize=9
-    title.TextXAlignment=Enum.TextXAlignment.Left
-    title.TextTransparency=1
-
-    local text=Instance.new("TextLabel",panel)
-    text.Name="SpecialJoinText"
-    text.Size=UDim2.new(1,-64,0,0)
-    text.Position=UDim2.new(0,52,0,26)
-    text.AutomaticSize=Enum.AutomaticSize.Y
-    text.BackgroundTransparency=1
-    text.Font=Enum.Font.GothamMedium
-    text.Text=tostring(eventData.Text or "")
-    text.TextColor3=Color3.new(1,0,0)
-    text.TextSize=12
-    text.TextWrapped=true
-    text.TextXAlignment=Enum.TextXAlignment.Left
-    text.TextYAlignment=Enum.TextYAlignment.Top
-    text.TextTransparency=1
-
-    local pad=Instance.new("UIPadding",panel)
-    pad.PaddingBottom=UDim.new(0,12)
-
-    holder.Parent=MessageContainer
-    holder:SetAttribute("SpecialJoinEventId",tostring(eventData.EventId or eventData.JoinEventId or ""))
-    holder:SetAttribute("SpecialJoinScope","SERVER")
-
-    TweenService:Create(scale,TweenInfo.new(0.3,Enum.EasingStyle.Quart,Enum.EasingDirection.Out),{Scale=1}):Play()
-    TweenService:Create(panel,TweenInfo.new(0.3),{BackgroundTransparency=0.18}):Play()
-    TweenService:Create(stroke,TweenInfo.new(0.3),{Transparency=0.18}):Play()
-    TweenService:Create(title,TweenInfo.new(0.3),{TextTransparency=0}):Play()
-    TweenService:Create(text,TweenInfo.new(0.3),{TextTransparency=0}):Play()
-    TweenService:Create(emblem,TweenInfo.new(0.3),{TextTransparency=0,BackgroundTransparency=0.72}):Play()
-    AnimateSpecialJoinRainbow(text)
-
-    task.spawn(function()
-        task.wait(7)
-        if not holder or not holder.Parent then return end
-        local out=TweenInfo.new(0.55,Enum.EasingStyle.Sine,Enum.EasingDirection.In)
-        local t=TweenService:Create(panel,out,{BackgroundTransparency=1})
-        TweenService:Create(scale,out,{Scale=0.97}):Play()
-        TweenService:Create(stroke,out,{Transparency=1}):Play()
-        TweenService:Create(title,out,{TextTransparency=1}):Play()
-        TweenService:Create(text,out,{TextTransparency=1}):Play()
-        TweenService:Create(emblem,out,{TextTransparency=1,BackgroundTransparency=1}):Play()
-        t:Play(); t.Completed:Wait()
-        if holder and holder.Parent then holder:Destroy() end
-    end)
-    return holder
-end
-
-ShowSpecialJoinAnnouncement = function(eventData, isLocalOnly)
-    if not eventData or not eventData.IsSpecialJoinAnnouncement then return false end
-    local eventId=tostring(eventData.EventId or eventData.JoinEventId or "")
-    if eventId=="" or ShownSpecialJoinEventIds[eventId] then return false end
-    local ui=CreateSpecialJoinAnnouncement(eventData)
-    if not ui then return false end
-    ShownSpecialJoinEventIds[eventId]=true
-    ui.Visible=(ActiveTab=="SERVER")
-    table.insert(ServerUIElements,ui)
-    table.insert(SpecialJoinUIElements,ui)
-    return true
-end
 
 -- Notification Container Frame
 local NotifContainerFrame = Instance.new("Frame")
@@ -2567,6 +2479,9 @@ local function ShowCommandAutocomplete()
     elseif lower == "!announce" then
         command = "!announce "
         query = ""
+    elseif lower == "!testjoin" or lower:sub(1, 10) == "!testjoin " then
+        command = "!testjoin "
+        query = typed:sub(11)
     else
         return
     end
@@ -2576,6 +2491,10 @@ local function ShowCommandAutocomplete()
 
     if command == "!announce " then
         return
+    elseif command == "!testjoin " then
+        for _, roleName in ipairs(SPECIAL_JOIN_PRIORITY) do
+            table.insert(suggestions, roleName)
+        end
     elseif command == "!tag " then
         for roleName in pairs(RANK_STYLES) do
             if not seen[roleName] then
@@ -2893,9 +2812,6 @@ MakeDraggable(ToggleButton, ToggleButton)
 function SwitchTab(newTab)
     ActiveTab = newTab
     MessageContainer.Visible = (newTab == "GLOBAL" or newTab == "SERVER")
-    for _, specialUi in ipairs(SpecialJoinUIElements) do
-        if specialUi and specialUi.Parent then specialUi.Visible = (newTab == "SERVER") end
-    end
     InputBarFrame.Visible = (newTab == "GLOBAL" or newTab == "SERVER")
     AboutFrame.Visible = (newTab == "ABOUT")
     ProfileFrame.Visible = (newTab == "PROFILE")
@@ -2939,6 +2855,30 @@ local function AnimateRainbowText(textObject)
     end)
 end
 
+local function AnimateSpecialJoinText(textObject, definition)
+    if not textObject or not definition then return end
+    textObject.TextColor3 = definition.Start
+    task.spawn(function()
+        while textObject and textObject.Parent do
+            local tweenIn = TweenService:Create(
+                textObject,
+                TweenInfo.new(definition.Speed or 0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {TextColor3 = definition.End}
+            )
+            tweenIn:Play()
+            tweenIn.Completed:Wait()
+            if not textObject or not textObject.Parent then break end
+            local tweenOut = TweenService:Create(
+                textObject,
+                TweenInfo.new(definition.Speed or 0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {TextColor3 = definition.Start}
+            )
+            tweenOut:Play()
+            tweenOut.Completed:Wait()
+        end
+    end)
+end
+
 CreateMessageCard = function(msgData, isGlobal)
     local frame = Instance.new("Frame")
     frame.Name = "MessageCard"
@@ -2947,6 +2887,40 @@ CreateMessageCard = function(msgData, isGlobal)
     frame.BackgroundColor3 = msgData.IsPrivate and Color3.fromRGB(120, 20, 28) or Color3.fromRGB(15, 15, 22)
     frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 0
+
+    -- Special join announcements are deliberately rendered without a PFP,
+    -- role tag, username, or AI MoD sender. They are standalone chat text.
+    if msgData.IsSpecialJoinAnnouncement then
+        frame.BackgroundTransparency = 1
+        local announcement = Instance.new("TextLabel")
+        announcement.Name = "SpecialJoinAnnouncement"
+        announcement.Size = UDim2.new(1, -20, 0, 0)
+        announcement.Position = UDim2.new(0, 10, 0, 5)
+        announcement.AutomaticSize = Enum.AutomaticSize.Y
+        announcement.BackgroundTransparency = 1
+        announcement.Font = msgData.SpecialJoinBold and Enum.Font.GothamBold or Enum.Font.Gotham
+        announcement.Text = tostring(msgData.Text or "")
+        announcement.TextColor3 = Color3.fromRGB(255, 255, 255)
+        announcement.TextSize = 11
+        announcement.TextXAlignment = Enum.TextXAlignment.Center
+        announcement.TextYAlignment = Enum.TextYAlignment.Center
+        announcement.TextWrapped = true
+        announcement.Parent = frame
+
+        local definition = SPECIAL_JOIN_DEFINITIONS[msgData.SpecialJoinRole]
+        if definition then
+            AnimateSpecialJoinText(announcement, definition)
+        end
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingTop = UDim.new(0, 4)
+        pad.PaddingBottom = UDim.new(0, 4)
+        pad.Parent = frame
+        frame.Parent = MessageContainer
+        frame:SetAttribute("MessageTimestamp", msgData.Timestamp or 0)
+        frame:SetAttribute("MessageUsername", msgData.Username or "")
+        return frame
+    end
 
     local cardCorner = Instance.new("UICorner")
     cardCorner.CornerRadius = UDim.new(0, 8)
@@ -3114,7 +3088,7 @@ CreateMessageCard = function(msgData, isGlobal)
         contentLabel.Font = Enum.Font.Gotham
         contentLabel.Text = msgData.Text
         contentLabel.TextColor3 = msgData.IsPrivate and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(230, 230, 240)
-        if msgData.Announcement or msgData.IsJoinMessage then
+        if msgData.Announcement then
             AnimateRainbowText(contentLabel)
         end
         contentLabel.TextSize = 11
@@ -3327,28 +3301,24 @@ SendChatMessage = function()
         end
     end
 
-    if not isPrivate and string.sub(string.lower(typedText),1,9)=="/testjoin" then
-        local requestedRole=typedText:sub(10):gsub("^%s+",""):gsub("%s+$","")
-        local def=GetSpecialJoinDefinitionForRole(requestedRole)
-        if not def then
-            ShowLocalSystemMessage("[AI MoD] : Usage: /testjoin [Architect / Overseer / Moderator / Developer / Hacker / One of the OGs / COM-GOD / Regent of Clan / Disbander / Carnage].",true)
-            MessageInput.Text=""
-            return
+    if not isPrivate and string.sub(string.lower(typedText), 1, 10) == "!testjoin " then
+        local requestedRole = typedText:sub(11):gsub("^%s+", ""):gsub("%s+$", "")
+        local specialRole = ResolveSpecialJoinRole(requestedRole)
+        if not specialRole then
+            ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !testjoin [Architect / Overseer / Moderator / Developer / Hacker / One of the OGs👑 / COM-GOD⛓️ / Regent of Clan🔥 / Disbander / Carnage].", true)
+        else
+            -- Local-only test: it renders the exact standalone announcement without
+            -- posting a fake join event to every player in the server.
+            local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
+            local testId = "local_test_special_join_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999))
+            ServerCachedMessages[testId] = payload
+            local card = CreateMessageCard(payload, false)
+            card.Visible = (ActiveTab == "SERVER")
+            table.insert(ServerUIElements, card)
         end
-        local id="local_test_special_join_"..tostring(os.clock()).."_"..tostring(math.random(100000,999999))
-        local event=BuildSpecialJoinEvent(LocalPlayer.Name,LocalPlayer.DisplayName,def,id,os.time())
-        ShowSpecialJoinAnnouncement(event,true)
-        local normal={Username="AI_MoD",DisplayName="AI MoD",JoinedDisplayName=LocalPlayer.DisplayName,Text=LocalPlayer.DisplayName.." has Joined the Server Chat",Timestamp=os.time()+math.random()/1000,Role="BOT",PfpId=78588114275746,IsPrivate=false,IsJoinMessage=true,JoinEventId=id.."_normal"}
-        local key="local_test_join_"..id
-        ServerCachedMessages[key]=normal
-        local card=CreateMessageCard(normal,false)
-        card.Visible=(ActiveTab=="SERVER")
-        table.insert(ServerUIElements,card)
-        DisplayNewMessageNotif(normal,key)
-        MessageInput.Text=""
+        MessageInput.Text = ""
         return
-    end
-    if not isPrivate and typedText == "!testnotif" then
+    elseif not isPrivate and typedText == "!testnotif" then
         TestNotification()
         ShowLocalSystemMessage("[AI MoD] : Notification test triggered successfully ✓")
         MessageInput.Text = ""
@@ -3550,6 +3520,8 @@ MessageInput.FocusLost:Connect(function()
             or current:sub(1, 6) == "!mute "
             or current == "!announce"
             or current:sub(1, 9) == "!announce "
+            or current == "!testjoin"
+            or current:sub(1, 10) == "!testjoin "
 
         if not isCommand then
             HideCommandAutocomplete()
@@ -3577,20 +3549,57 @@ function BuildJoinMessagePayload()
     }
 end
 
-function ShowLocalJoinMessage()
-    -- Refresh the GitHub roster before calculating the joining client's special role.
-    pcall(FetchRemoteRoles)
-    pcall(function()
-        local special = GetHighestSpecialJoinDefinition(LocalPlayer.Name)
-        if special then
-            local eventId = "special_join_" .. tostring(LocalPlayer.UserId) .. "_" .. tostring(os.time()) .. "_" .. tostring(math.random(100000,999999))
-            local eventData = BuildSpecialJoinEvent(LocalPlayer.Name, LocalPlayer.DisplayName, special, eventId, os.time())
-            ShowSpecialJoinAnnouncement(eventData, true)
-            task.spawn(function()
-                pcall(function() HttpRequest(SPECIAL_JOIN_EVENTS_ENDPOINT, "POST", eventData) end)
-            end)
-        end
+local function BuildSpecialJoinAnnouncementPayload(specialRole)
+    local definition = SPECIAL_JOIN_DEFINITIONS[specialRole]
+    if not definition then return nil end
+
+    local displayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true)
+    local username = LocalPlayer.Name
+    local text = definition.Template
+        :gsub("%[PlayerName%]", displayName)
+        :gsub("%(Username%)", "(" .. username .. ")")
+
+    return {
+        ClientMessageId = LocalPlayer.UserId .. "_special_join_" .. JoinEventId,
+        Username = LocalPlayer.Name,
+        DisplayName = displayName,
+        Text = text,
+        Timestamp = os.time(),
+        Role = specialRole,
+        IsPrivate = false,
+        IsSpecialJoinAnnouncement = true,
+        SpecialJoinRole = specialRole,
+        SpecialJoinBold = definition.Bold == true,
+        JoinEventId = JoinEventId,
+    }
+end
+
+local function RenderLocalSpecialJoinAnnouncement(specialRole)
+    local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
+    if not payload then return end
+
+    local localId = "local_special_join_" .. JoinEventId
+    ServerCachedMessages[localId] = payload
+    local card = CreateMessageCard(payload, false)
+    card.Visible = (ActiveTab == "SERVER")
+    table.insert(ServerUIElements, card)
+end
+
+local function PostSpecialJoinAnnouncement(specialRole)
+    local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
+    if not payload then return end
+    task.spawn(function()
+        pcall(function()
+            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
+        end)
     end)
+end
+
+function ShowLocalJoinMessage()
+    local specialRole = GetHighestSpecialJoinRole(LocalPlayer.Name)
+    if specialRole then
+        RenderLocalSpecialJoinAnnouncement(specialRole)
+    end
 
     local payload = BuildJoinMessagePayload()
     local localId = "local_join_" .. JoinEventId
@@ -3604,9 +3613,17 @@ function ShowLocalJoinMessage()
 end
 
 function PostServerJoinMessage()
+    local specialRole = GetHighestSpecialJoinRole(LocalPlayer.Name)
+    if specialRole then
+        PostSpecialJoinAnnouncement(specialRole)
+        task.wait(0.05)
+    end
+
     local payload = BuildJoinMessagePayload()
     task.spawn(function()
-        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
+        pcall(function()
+            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
+        end)
     end)
 end
 
@@ -3635,19 +3652,11 @@ function PollMessages()
                         local card = CreateMessageCard(msg, true)
                         card.Visible = (ActiveTab == "GLOBAL")
                         table.insert(GlobalUIElements, card)
-                        DisplayNewMessageNotif(msg)
+                        if not msg.IsSpecialJoinAnnouncement then
+                            DisplayNewMessageNotif(msg)
+                        end
                     end
                     end
-                end
-            end
-        end
-
-        local specialJoinData = HttpRequest(SPECIAL_JOIN_EVENTS_ENDPOINT, "GET")
-        if specialJoinData and type(specialJoinData) == "table" then
-            for id,eventData in pairs(specialJoinData) do
-                if type(eventData)=="table" and eventData.IsSpecialJoinAnnouncement and eventData.Scope=="SERVER" and tonumber(eventData.Timestamp or 0)>=ScriptStartTime then
-                    eventData.EventId=eventData.EventId or eventData.JoinEventId or tostring(id)
-                    pcall(function() ShowSpecialJoinAnnouncement(eventData,false) end)
                 end
             end
         end
@@ -3674,7 +3683,9 @@ function PollMessages()
                         local card = CreateMessageCard(msg, false)
                         card.Visible = (ActiveTab == "SERVER")
                         table.insert(ServerUIElements, card)
-                        DisplayNewMessageNotif(msg)
+                        if not msg.IsSpecialJoinAnnouncement then
+                            DisplayNewMessageNotif(msg)
+                        end
                     end
                     end
                 end
@@ -3687,6 +3698,7 @@ end
 
 task.spawn(function()
     task.wait(0.5)
+    pcall(function() FetchRemoteRoles() end)
     ShowLocalJoinMessage()
     task.wait(0.25)
     PostServerJoinMessage()
