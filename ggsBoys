@@ -23,6 +23,7 @@ local ScriptStartTime = os.time()
 local MessageInput = nil
 local SendChatMessage = nil
 local CreateMessageCard = nil
+local BuildSpecialJoinAnnouncementPayload = nil
 
 -- Anti-Spam Tracking State
 local LastSentMessageText = ""
@@ -763,7 +764,6 @@ local RANK_STYLES = {
     ["One of the OGs👑"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(100, 45, 0), Name = Color3.fromRGB(255, 230, 80), Speed = 1.0 },
     ["COM-GOD⛓️"] = { Start = Color3.fromRGB(220, 220, 220), End = Color3.fromRGB(40, 40, 40), Name = Color3.fromRGB(245, 245, 245), Speed = 1.1 },
     ["Regent of Clan🔥"] = { Start = Color3.fromRGB(255, 100, 0), End = Color3.fromRGB(90, 0, 0), Name = Color3.fromRGB(255, 150, 40), Speed = 1.0 },
-    ["Disbander"] = { Start = Color3.fromRGB(170, 255, 0), End = Color3.fromRGB(40, 90, 0), Name = Color3.fromRGB(190, 255, 40), Speed = 1.0 },
     ["Carnage🩸"] = { Start = Color3.fromRGB(220, 0, 0), End = Color3.fromRGB(60, 0, 0), Name = Color3.fromRGB(255, 50, 50), Speed = 1.0 },
     ["Psychopath💀"] = { Start = Color3.fromRGB(190, 40, 80), End = Color3.fromRGB(50, 0, 20), Name = Color3.fromRGB(255, 80, 120), Speed = 0.8 },
     ["Manipulator😈"] = { Start = Color3.fromRGB(170, 70, 255), End = Color3.fromRGB(40, 0, 80), Name = Color3.fromRGB(210, 120, 255), Speed = 0.9 },
@@ -991,7 +991,7 @@ end
 -- ============================================================================
 local ROLE_PRIORITY = {
     "Architect", "Overseer", "Moderator", "Developer", "Hacker", "BOT",
-    "One of the OGs👑", "COM-GOD⛓️", "Regent of Clan🔥", "Disbander", "Carnage🩸",
+    "One of the OGs👑", "COM-GOD⛓️", "Regent of Clan🔥", "Carnage🩸",
     "Psychopath💀", "Manipulator😈", "Narcissist", "BATMAN🦇",
     "PIRATE·KING🏴‍☠️", "HOMELANDER🇺🇸", "SUPER·SAYAN", "POOKIE🎀",
     "MALKIN🌸", "HAWTIE🥵", "GOAT🐐", "SCHOOL-CRUSH😍", "SPANKER☠️",
@@ -1021,12 +1021,6 @@ local function RoleNameEquals(a, b)
 end
 
 local function FindCanonicalRole(roleName)
-    local normalized = string.lower(tostring(roleName or "")):gsub("^%s+", ""):gsub("%s+$", "")
-    -- Accept the requested short test/roster name while retaining the existing
-    -- canonical role used by the current GitHub roster and role styles.
-    if normalized == "carnage" then
-        return "Carnage🩸"
-    end
     for _, candidate in ipairs(ROLE_PRIORITY) do
         if RoleNameEquals(candidate, roleName) then return candidate end
     end
@@ -1051,8 +1045,16 @@ local function GetHighestRole(username)
 end
 
 local function PlayerHasRole(username, roleName)
+    local wanted = string.lower(tostring(roleName or "")):gsub("^%s+", ""):gsub("%s+$", "")
     for _, assignedRole in ipairs(GetPlayerRoles(username)) do
-        if RoleNameEquals(assignedRole, roleName) then return true end
+        local assigned = string.lower(tostring(assignedRole or "")):gsub("^%s+", ""):gsub("%s+$", "")
+        if assigned == wanted then
+            return true
+        end
+        -- Accept the short roster name "Carnage" for the displayed special role.
+        if wanted == "carnage🩸" and assigned == "carnage" then
+            return true
+        end
     end
     return false
 end
@@ -1067,9 +1069,7 @@ end
 
 -- ============================================================================
 -- SPECIAL JOIN ANNOUNCEMENTS
--- The first matching role in this list wins. These are intentionally separate
--- from the normal role hierarchy so BOT or other roles can never override a
--- special join announcement.
+-- Independent of the normal role hierarchy. The first matching role wins.
 -- ============================================================================
 local SPECIAL_JOIN_PRIORITY = {
     "Architect",
@@ -1087,73 +1087,43 @@ local SPECIAL_JOIN_PRIORITY = {
 local SPECIAL_JOIN_DEFINITIONS = {
     ["Architect"] = {
         Template = "Colossal, invisible gears grind into place, reshaping the channel's foundation before your eyes . . . Architect [PlayerName] has descended into the Server Chat. (Username)",
-        Start = Color3.fromRGB(255, 0, 0),
-        End = Color3.fromRGB(80, 0, 0),
-        Bold = true,
-        Speed = 0.9,
+        Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(75, 0, 0), Bold = true, Speed = 0.9,
     },
     ["Overseer"] = {
         Template = "A chilling sensation crawls down your spine as an omniscient, unseen gaze locks onto the channel . . . Overseer [PlayerName] is now watching the Server Chat. (Username)",
-        Start = Color3.fromRGB(255, 0, 0),
-        End = Color3.fromRGB(70, 0, 0),
-        Bold = true,
-        Speed = 0.9,
+        Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(65, 0, 0), Bold = true, Speed = 0.9,
     },
     ["Moderator"] = {
         Template = "The chaotic chatter instantly falls dead silent as the crushing weight of absolute order descends . . . Moderator [PlayerName] has stepped into the Server Chat. (Username)",
-        Start = Color3.fromRGB(190, 0, 255),
-        End = Color3.fromRGB(0, 100, 255),
-        Bold = true,
-        Speed = 0.85,
+        Start = Color3.fromRGB(190, 0, 255), End = Color3.fromRGB(0, 90, 255), Bold = true, Speed = 0.85,
     },
     ["Developer"] = {
         Template = "The interface glitches violently, bleeding raw, glowing source code into the atmosphere . . . Developer [PlayerName] has spawned into the Server Chat. (Username)",
-        Start = Color3.fromRGB(0, 255, 255),
-        End = Color3.fromRGB(0, 80, 120),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(0, 255, 255), End = Color3.fromRGB(0, 110, 180), Bold = false, Speed = 0.9,
     },
     ["Hacker"] = {
         Template = "Crimson warning lights flash as the impenetrable firewall violently shatters into digital dust . . . Hacker [PlayerName] has breached the Server Chat. (Username)",
-        Start = Color3.fromRGB(255, 40, 40),
-        End = Color3.fromRGB(90, 0, 0),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(255, 35, 35), End = Color3.fromRGB(110, 0, 0), Bold = false, Speed = 0.9,
     },
     ["One of the OGs👑"] = {
         Template = "A heavy, ancient aura washes over the channel, demanding absolute reverence from every newcomer . . . One of the OGs👑 [PlayerName] has graced the Server Chat. (Username)",
-        Start = Color3.fromRGB(255, 215, 0),
-        End = Color3.fromRGB(255, 255, 255),
-        Bold = false,
-        Speed = 0.85,
+        Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(255, 255, 255), Bold = false, Speed = 0.85,
     },
     ["COM-GOD⛓️"] = {
         Template = "An unbearable, suffocating pressure instantly crushes the room, binding everyone in invisible chains . . . COM-GOD⛓️ [PlayerName] has dominated the Server Chat. (Username)",
-        Start = Color3.fromRGB(255, 120, 0),
-        End = Color3.fromRGB(255, 220, 60),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(255, 120, 0), End = Color3.fromRGB(255, 220, 50), Bold = false, Speed = 0.9,
     },
     ["Regent of Clan🔥"] = {
         Template = "The temperature spikes drastically as the roaring war chants of a ruthless empire echo through the logs . . . Regent of Clan🔥 [PlayerName] has set the Server Chat ablaze. (Username)",
-        Start = Color3.fromRGB(255, 120, 0),
-        End = Color3.fromRGB(255, 220, 50),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(255, 120, 0), End = Color3.fromRGB(255, 220, 50), Bold = false, Speed = 0.9,
     },
     ["Disbander"] = {
         Template = "The foundations of every alliance begin to tremble as names, loyalties, and banners are erased without warning . . . Disbander [PlayerName] has arrived to dismantle the Server Chat. (Username)",
-        Start = Color3.fromRGB(180, 255, 0),
-        End = Color3.fromRGB(70, 255, 0),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(170, 255, 0), End = Color3.fromRGB(60, 255, 0), Bold = false, Speed = 0.9,
     },
     ["Carnage🩸"] = {
         Template = "A wave of crimson dread sweeps through the channel as the silence before the slaughter gives way to absolute chaos . . . Carnage [PlayerName] has entered the Server Chat. (Username)",
-        Start = Color3.fromRGB(180, 255, 0),
-        End = Color3.fromRGB(70, 255, 0),
-        Bold = false,
-        Speed = 0.9,
+        Start = Color3.fromRGB(170, 255, 0), End = Color3.fromRGB(60, 255, 0), Bold = false, Speed = 0.9,
     },
 }
 
@@ -1168,7 +1138,9 @@ end
 
 local function ResolveSpecialJoinRole(requestedRole)
     local normalized = string.lower(tostring(requestedRole or "")):gsub("^%s+", ""):gsub("%s+$", "")
-    if normalized == "carnage" then return "Carnage🩸" end
+    if normalized == "carnage" or normalized == "carnage🩸" then
+        return "Carnage🩸"
+    end
     for _, specialRole in ipairs(SPECIAL_JOIN_PRIORITY) do
         if string.lower(specialRole) == normalized then
             return specialRole
@@ -2860,21 +2832,14 @@ local function AnimateSpecialJoinText(textObject, definition)
     textObject.TextColor3 = definition.Start
     task.spawn(function()
         while textObject and textObject.Parent do
-            local tweenIn = TweenService:Create(
-                textObject,
-                TweenInfo.new(definition.Speed or 0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                {TextColor3 = definition.End}
-            )
-            tweenIn:Play()
-            tweenIn.Completed:Wait()
+            local duration = definition.Speed or 0.9
+            local toEnd = TweenService:Create(textObject, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextColor3 = definition.End})
+            toEnd:Play()
+            toEnd.Completed:Wait()
             if not textObject or not textObject.Parent then break end
-            local tweenOut = TweenService:Create(
-                textObject,
-                TweenInfo.new(definition.Speed or 0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                {TextColor3 = definition.Start}
-            )
-            tweenOut:Play()
-            tweenOut.Completed:Wait()
+            local toStart = TweenService:Create(textObject, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextColor3 = definition.Start})
+            toStart:Play()
+            toStart.Completed:Wait()
         end
     end)
 end
@@ -2888,10 +2853,9 @@ CreateMessageCard = function(msgData, isGlobal)
     frame.BackgroundTransparency = 0.4
     frame.BorderSizePixel = 0
 
-    -- Special join announcements are deliberately rendered without a PFP,
-    -- role tag, username, or AI MoD sender. They are standalone chat text.
     if msgData.IsSpecialJoinAnnouncement then
         frame.BackgroundTransparency = 1
+
         local announcement = Instance.new("TextLabel")
         announcement.Name = "SpecialJoinAnnouncement"
         announcement.Size = UDim2.new(1, -20, 0, 0)
@@ -2916,6 +2880,7 @@ CreateMessageCard = function(msgData, isGlobal)
         pad.PaddingTop = UDim.new(0, 4)
         pad.PaddingBottom = UDim.new(0, 4)
         pad.Parent = frame
+
         frame.Parent = MessageContainer
         frame:SetAttribute("MessageTimestamp", msgData.Timestamp or 0)
         frame:SetAttribute("MessageUsername", msgData.Username or "")
@@ -3301,24 +3266,7 @@ SendChatMessage = function()
         end
     end
 
-    if not isPrivate and string.sub(string.lower(typedText), 1, 10) == "!testjoin " then
-        local requestedRole = typedText:sub(11):gsub("^%s+", ""):gsub("%s+$", "")
-        local specialRole = ResolveSpecialJoinRole(requestedRole)
-        if not specialRole then
-            ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !testjoin [Architect / Overseer / Moderator / Developer / Hacker / One of the OGs👑 / COM-GOD⛓️ / Regent of Clan🔥 / Disbander / Carnage].", true)
-        else
-            -- Local-only test: it renders the exact standalone announcement without
-            -- posting a fake join event to every player in the server.
-            local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
-            local testId = "local_test_special_join_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999))
-            ServerCachedMessages[testId] = payload
-            local card = CreateMessageCard(payload, false)
-            card.Visible = (ActiveTab == "SERVER")
-            table.insert(ServerUIElements, card)
-        end
-        MessageInput.Text = ""
-        return
-    elseif not isPrivate and typedText == "!testnotif" then
+    if not isPrivate and typedText == "!testnotif" then
         TestNotification()
         ShowLocalSystemMessage("[AI MoD] : Notification test triggered successfully ✓")
         MessageInput.Text = ""
@@ -3331,6 +3279,23 @@ SendChatMessage = function()
     elseif not isPrivate and typedText == "!joined" then
         ShowLocalJoinMessage()
         ShowLocalSystemMessage("[AI MoD] : Join-message test triggered successfully ✓")
+        MessageInput.Text = ""
+        return
+    elseif not isPrivate and string.sub(string.lower(typedText), 1, 10) == "!testjoin " then
+        local requestedRole = typedText:sub(11):gsub("^%s+", ""):gsub("%s+$", "")
+        local specialRole = ResolveSpecialJoinRole(requestedRole)
+        if not specialRole then
+            ShowLocalSystemMessage("[AI MoD] : Command failed. Usage: !testjoin [Architect / Overseer / Moderator / Developer / Hacker / One of the OGs👑 / COM-GOD⛓️ / Regent of Clan🔥 / Disbander / Carnage].", true)
+        else
+            local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
+            if payload then
+                local localId = "local_test_special_join_" .. tostring(os.clock())
+                ServerCachedMessages[localId] = payload
+                local card = CreateMessageCard(payload, false)
+                card.Visible = (ActiveTab == "SERVER")
+                table.insert(ServerUIElements, card)
+            end
+        end
         MessageInput.Text = ""
         return
     elseif not isPrivate and string.sub(typedText, 1, 9) == "!announce" then
@@ -3549,7 +3514,7 @@ function BuildJoinMessagePayload()
     }
 end
 
-local function BuildSpecialJoinAnnouncementPayload(specialRole)
+BuildSpecialJoinAnnouncementPayload = function(specialRole)
     local definition = SPECIAL_JOIN_DEFINITIONS[specialRole]
     if not definition then return nil end
 
@@ -3585,16 +3550,6 @@ local function RenderLocalSpecialJoinAnnouncement(specialRole)
     table.insert(ServerUIElements, card)
 end
 
-local function PostSpecialJoinAnnouncement(specialRole)
-    local payload = BuildSpecialJoinAnnouncementPayload(specialRole)
-    if not payload then return end
-    task.spawn(function()
-        pcall(function()
-            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
-        end)
-    end)
-end
-
 function ShowLocalJoinMessage()
     local specialRole = GetHighestSpecialJoinRole(LocalPlayer.Name)
     if specialRole then
@@ -3614,15 +3569,18 @@ end
 
 function PostServerJoinMessage()
     local specialRole = GetHighestSpecialJoinRole(LocalPlayer.Name)
-    if specialRole then
-        PostSpecialJoinAnnouncement(specialRole)
-        task.wait(0.05)
-    end
+    local specialPayload = specialRole and BuildSpecialJoinAnnouncementPayload(specialRole) or nil
+    local normalPayload = BuildJoinMessagePayload()
 
-    local payload = BuildJoinMessagePayload()
     task.spawn(function()
+        -- Post sequentially so every client receives special announcement first.
+        if specialPayload then
+            pcall(function()
+                HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", specialPayload)
+            end)
+        end
         pcall(function()
-            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
+            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", normalPayload)
         end)
     end)
 end
@@ -3663,32 +3621,54 @@ function PollMessages()
 
         local serverData = HttpRequest(SERVER_MESSAGES_ENDPOINT, "GET")
         if serverData and type(serverData) == "table" then
-            for id, msg in pairs(serverData) do
-                if type(msg) == "table" and msg.JoinEventId == JoinEventId then
-                    -- Already rendered locally.
-                elseif type(msg) == "table" and msg.MuteAction then
+            -- Firebase returns an object, so pairs() does not guarantee insertion order.
+            -- Render special join announcements first, then ordinary join messages.
+            local deferredJoinMessages = {}
+
+            local function RenderServerMessage(id, msg)
+                if type(msg) ~= "table" then return end
+                if msg.JoinEventId == JoinEventId then return end
+
+                if msg.MuteAction then
                     if tonumber(msg.ExpiresAt or 0) > os.time() and msg.TargetUsername and msg.Scope == "SERVER" then
                         Moderation.ActiveMutes[Moderation.GetMuteKey("SERVER", msg.TargetUsername)] = msg
                     end
-                elseif type(msg) == "table" and msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name) then
-                    local blockedByMute = Moderation.GetActiveMute("SERVER", msg.Username) ~= nil
-                    if blockedByMute and msg.Username ~= LocalPlayer.Name then
-                        -- Muted users' messages are not rendered by clients while the mute is active.
-                    else
-                    local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
-                    if clientKey and ServerCachedMessages[clientKey] then
-                        ServerCachedMessages[id] = msg
-                    elseif not ServerCachedMessages[id] then
-                        ServerCachedMessages[id] = msg
-                        local card = CreateMessageCard(msg, false)
-                        card.Visible = (ActiveTab == "SERVER")
-                        table.insert(ServerUIElements, card)
-                        if not msg.IsSpecialJoinAnnouncement then
-                            DisplayNewMessageNotif(msg)
-                        end
-                    end
+                    return
+                end
+
+                if not (msg.Timestamp and msg.Timestamp >= ScriptStartTime and (not msg.IsPrivate or msg.Username == LocalPlayer.Name or msg.TargetUsername == LocalPlayer.Name)) then
+                    return
+                end
+
+                local blockedByMute = Moderation.GetActiveMute("SERVER", msg.Username) ~= nil
+                if blockedByMute and msg.Username ~= LocalPlayer.Name then return end
+
+                local clientKey = msg.ClientMessageId and ("local_" .. tostring(msg.ClientMessageId)) or nil
+                if clientKey and ServerCachedMessages[clientKey] then
+                    ServerCachedMessages[id] = msg
+                elseif not ServerCachedMessages[id] then
+                    ServerCachedMessages[id] = msg
+                    local card = CreateMessageCard(msg, false)
+                    card.Visible = (ActiveTab == "SERVER")
+                    table.insert(ServerUIElements, card)
+                    if not msg.IsSpecialJoinAnnouncement then
+                        DisplayNewMessageNotif(msg)
                     end
                 end
+            end
+
+            for id, msg in pairs(serverData) do
+                if type(msg) == "table" and msg.IsSpecialJoinAnnouncement then
+                    RenderServerMessage(id, msg)
+                elseif type(msg) == "table" and msg.IsJoinMessage then
+                    table.insert(deferredJoinMessages, {Id = id, Message = msg})
+                else
+                    RenderServerMessage(id, msg)
+                end
+            end
+
+            for _, item in ipairs(deferredJoinMessages) do
+                RenderServerMessage(item.Id, item.Message)
             end
         end
 
