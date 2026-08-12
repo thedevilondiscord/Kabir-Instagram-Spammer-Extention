@@ -1008,25 +1008,59 @@ pcall(function()
 end)
 
 local function HttpRequest(url, method, data)
-    if type(http_req) ~= "function" then
-        return nil
-    end
-    local success, response = pcall(function()
-        return http_req({
-            Url = url,
-            Method = method or "GET",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = data and HttpService:JSONEncode(data) or nil
-        })
-    end)
+    method = string.upper(tostring(method or "GET"))
+    local body = data and HttpService:JSONEncode(data) or nil
 
-    if success and response and response.Body then
-        local decodedSuccess, decodedData = pcall(function()
-            return HttpService:JSONDecode(response.Body)
+    -- Prefer executor request APIs when available. Different executors expose
+    -- response bodies under different field names, so normalize them here.
+    if type(http_req) == "function" then
+        local success, response = pcall(function()
+            return http_req({
+                Url = url,
+                Method = method,
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = body
+            })
         end)
-        return decodedSuccess and decodedData or nil
+
+        if success and response then
+            local responseBody = response.Body or response.body or response.ResponseBody or response.responseBody
+            if responseBody == nil and type(response) == "string" then
+                responseBody = response
+            end
+            if responseBody ~= nil then
+                if type(responseBody) ~= "string" then
+                    return responseBody
+                end
+                if responseBody == "" or responseBody == "null" then
+                    return true
+                end
+                local decodedSuccess, decodedData = pcall(function()
+                    return HttpService:JSONDecode(responseBody)
+                end)
+                if decodedSuccess then
+                    return decodedData
+                end
+                -- Some endpoints may legitimately return plain text.
+                return responseBody
+            end
+        end
     end
-    return nil
+
+    -- Safe fallback for normal Roblox environments with HTTP enabled.
+    local fallbackSuccess, fallbackResult = pcall(function()
+        if method == "GET" then
+            local raw = HttpService:GetAsync(url, false)
+            if raw == "" or raw == "null" then return true end
+            return HttpService:JSONDecode(raw)
+        elseif method == "POST" then
+            local raw = HttpService:PostAsync(url, body or "", Enum.HttpContentType.ApplicationJson, false)
+            if raw == "" or raw == "null" then return true end
+            return HttpService:JSONDecode(raw)
+        end
+        return nil
+    end)
+    return fallbackSuccess and fallbackResult or nil
 end
 
 -- ============================================================================
@@ -1718,7 +1752,9 @@ local function DisplayNewMessageNotif(msgData, messageId)
     local isClient = (msgData.Username == LocalPlayer.Name)
     local formattedName = GetFormattedDisplayName(rawName, isClient)
     local rawText = msgData.Text or ""
-    if msgData.IsJoinMessage then
+    if msgData.IsSpecialJoinAnnouncement then
+        rawText = tostring(msgData.Text or "Special role joined")
+    elseif msgData.IsJoinMessage then
         rawText = tostring(msgData.JoinedDisplayName or msgData.Text or "Unknown") .. " has Joined the Server Chat"
     elseif string.sub(rawText, 1, 11) == "rbxthumb://" or string.sub(rawText, 1, 13) == "rbxassetid://" then
         rawText = "[Sticker]"
@@ -1753,7 +1789,15 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifStroke.Parent = notifBtn
 
     local notifGradient = Instance.new("UIGradient")
-    if msgData.IsJoinMessage then
+    if msgData.IsSpecialJoinAnnouncement then
+        notifGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 215, 0)),
+            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 80, 80)),
+            ColorSequenceKeypoint.new(1.00, Color3.fromRGB(120, 0, 0)),
+        })
+    elseif msgData.IsJoinMessage then
         notifGradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
             ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
@@ -1797,7 +1841,9 @@ local function DisplayNewMessageNotif(msgData, messageId)
     notifText.Position = UDim2.new(0, 54, 0, 4)
     notifText.BackgroundTransparency = 1
     notifText.Font = Enum.Font.GothamBold
-    notifText.Text = msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat") or (formattedName .. " : " .. formattedMsg)
+    notifText.Text = msgData.IsSpecialJoinAnnouncement and (tostring(msgData.Text or "Special role joined"))
+        or (msgData.IsJoinMessage and (tostring(msgData.JoinedDisplayName or "Unknown") .. " has Joined the Server Chat")
+        or (formattedName .. " : " .. formattedMsg))
     notifText.TextColor3 = Color3.fromRGB(245, 245, 250)
     notifText.TextSize = 11
     notifText.TextWrapped = true
@@ -3079,7 +3125,7 @@ local function RenderCustomChatBubble(msgData)
         end
     end)
 
-    task.delay(4.0, function()
+    task.delay(7.0, function()
         if not bb.Parent then return end
         local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         TweenService:Create(glass, fade, {BackgroundTransparency = 1}):Play()
@@ -3122,6 +3168,35 @@ CreateMessageCard = function(msgData, isGlobal)
 
     local roleName = msgData.Role or GetAssignedOrCalculatedRole(msgData.Username)
     local style = RANK_STYLES[roleName] or RANK_STYLES["VIP"]
+
+    if msgData.IsSpecialJoinAnnouncement then
+        frame.Name = "SpecialJoinAnnouncement"
+        frame.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+        frame.BackgroundTransparency = 0.08
+
+        local specialStroke = Instance.new("UIStroke")
+        specialStroke.Name = "SpecialJoinStroke"
+        specialStroke.Thickness = 2
+        specialStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        specialStroke.Parent = frame
+
+        local specialGradient = Instance.new("UIGradient")
+        specialGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, style.Start or Color3.new(1,1,1)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(1, style.End or style.Start or Color3.new(1,1,1)),
+        })
+        specialGradient.Parent = specialStroke
+
+        task.spawn(function()
+            while frame.Parent and specialStroke.Parent do
+                specialGradient.Rotation = (specialGradient.Rotation + 90) % 360
+                task.wait(0.04)
+            end
+        end)
+
+        msgPfpImg.Image = "rbxthumb://type=Asset&id=" .. tostring(msgData.PfpId or DefaultPfpId) .. "&w=150&h=150"
+    end
 
     local tagLabel = Instance.new("TextLabel")
     tagLabel.Name = "RoleTag"
@@ -3273,7 +3348,11 @@ CreateMessageCard = function(msgData, isGlobal)
         -- Announcement styling remains highest priority, followed by special-role
         -- message colours, then the existing private/default chat colours.
         local roleMessageColor = CHAT_MESSAGE_TEXT_COLORS[msgData.Role]
-        if msgData.Announcement then
+        if msgData.IsSpecialJoinAnnouncement then
+            contentLabel.TextColor3 = style.Name or Color3.fromRGB(255, 255, 255)
+            contentLabel.Font = Enum.Font.GothamBlack
+            contentLabel.TextSize = 13
+        elseif msgData.Announcement then
             contentLabel.TextColor3 = ANNOUNCEMENT_TEXT_COLOR
         elseif roleMessageColor then
             contentLabel.TextColor3 = roleMessageColor
@@ -3619,7 +3698,7 @@ SendChatMessage = function()
         ConsecutiveSpamCount = 1
     end
 
-    if ConsecutiveSpamCount >= 3 then
+    if ConsecutiveSpamCount >= 2 then
         ShowAntiSpamMessage()
         MessageInput.Text = ""
         return
@@ -3708,12 +3787,28 @@ MessageInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then SendChatMessage() end
 end)
 
-function BuildJoinMessagePayload()
+local SPECIAL_JOIN_ROLES = {
+    ["Architect"] = true,
+    ["Overseer"] = true,
+    ["Moderator"] = true,
+    ["Dev-Contributor"] = true,
+    ["Hacker"] = true,
+}
+
+local SPECIAL_JOIN_COPY = {
+    ["Architect"] = "THE ARCHITECT HAS ENTERED THE SERVER",
+    ["Overseer"] = "THE OVERSEER HAS ARRIVED",
+    ["Moderator"] = "A MODERATOR HAS JOINED THE SERVER",
+    ["Dev-Contributor"] = "A DEV-CONTRIBUTOR HAS ENTERED THE SERVER",
+    ["Hacker"] = "THE HACKER HAS ENTERED THE SERVER",
+}
+
+local function BuildNormalJoinMessagePayload()
     return {
         Username = "AI_MoD",
         DisplayName = "AI MoD",
-        JoinedDisplayName = LocalPlayer.DisplayName,
-        Text = LocalPlayer.DisplayName .. " has Joined the Server Chat",
+        JoinedDisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = GetFormattedDisplayName(LocalPlayer.DisplayName, true) .. " has Joined the Server Chat",
         Timestamp = os.time(),
         Role = "BOT",
         PfpId = 78588114275746,
@@ -3723,11 +3818,34 @@ function BuildJoinMessagePayload()
     }
 end
 
-function ShowLocalJoinMessage()
-    local payload = BuildJoinMessagePayload()
-    local localId = "local_join_" .. JoinEventId
+local function BuildSpecialJoinMessagePayload()
+    local highestRole = GetHighestRole(LocalPlayer.Name)
+    if not SPECIAL_JOIN_ROLES[highestRole] then
+        return nil
+    end
 
-    -- Immediate local render: the joining client does not wait for Firebase.
+    return {
+        Username = "__SPECIAL_JOIN__",
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        JoinedDisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = SPECIAL_JOIN_COPY[highestRole] or (string.upper(highestRole) .. " HAS ENTERED THE SERVER"),
+        Timestamp = os.time(),
+        Role = highestRole,
+        PfpId = CurrentPfpId,
+        IsPrivate = false,
+        IsJoinMessage = true,
+        IsSpecialJoinAnnouncement = true,
+        SpecialJoinRole = highestRole,
+        JoinEventId = JoinEventId,
+    }
+end
+
+function BuildJoinMessagePayload()
+    return BuildNormalJoinMessagePayload()
+end
+
+local function RenderLocalJoinPayload(payload, localId)
+    if not payload then return end
     ServerCachedMessages[localId] = payload
     local card = CreateMessageCard(payload, false)
     card.Visible = (ActiveTab == "SERVER")
@@ -3735,10 +3853,26 @@ function ShowLocalJoinMessage()
     DisplayNewMessageNotif(payload, localId)
 end
 
+function ShowLocalJoinMessage()
+    -- Special role announcement is deliberately a separate system-style card.
+    local special = BuildSpecialJoinMessagePayload()
+    if special then
+        RenderLocalJoinPayload(special, "local_special_join_" .. JoinEventId)
+    end
+
+    -- Every player still receives the ordinary join message immediately after it.
+    RenderLocalJoinPayload(BuildNormalJoinMessagePayload(), "local_join_" .. JoinEventId)
+end
+
 function PostServerJoinMessage()
-    local payload = BuildJoinMessagePayload()
+    local special = BuildSpecialJoinMessagePayload()
+    local normal = BuildNormalJoinMessagePayload()
     task.spawn(function()
-        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", payload)
+        if special then
+            HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", special)
+        end
+        task.wait(0.05)
+        HttpRequest(SERVER_MESSAGES_ENDPOINT, "POST", normal)
     end)
 end
 
@@ -3811,6 +3945,7 @@ end
 
 task.spawn(function()
     task.wait(0.5)
+    pcall(FetchRemoteRoles)
     ShowLocalJoinMessage()
     task.wait(0.25)
     PostServerJoinMessage()
