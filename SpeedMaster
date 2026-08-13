@@ -23,7 +23,6 @@ local ScriptStartTime = os.time()
 local MessageInput = nil
 local SendChatMessage = nil
 local CreateMessageCard = nil
-local JoinMusicSession = nil
 
 -- Anti-Spam Tracking State
 local LastSentMessageText = ""
@@ -455,6 +454,53 @@ end)
 -- ============================================================================
 -- ENDPOINTS & AUDIO
 -- ============================================================================
+
+-- ============================================================================
+-- MUSIC SESSION ENDPOINTS (ADDITIVE FEATURE - EXISTING ENDPOINTS UNCHANGED)
+-- ============================================================================
+local MUSIC_SESSION_FIREBASE_URL = "https://kmusicsessionxd-default-rtdb.asia-southeast1.firebasedatabase.app/"
+local MUSIC_SESSION_ROOT = MUSIC_SESSION_FIREBASE_URL .. "sessions/"
+local MUSIC_SESSION_CATALOG_URL = "https://raw.githubusercontent.com/basementfox98/DBforS2/main/db2"
+
+local MUSIC_SESSION_FALLBACK_CATALOG = {
+    Songs = {
+        {name = "Memory Reboot", id = "105158334993991"},
+        {name = "Monster", id = "140021357514406"},
+        {name = "It was good day", id = "79622922062181"},
+        {name = "Blue Young Kai", id = "84729628311938"},
+        {name = "Love Story", id = "135528953872601"},
+        {name = "UNLEAKED SONG (FINAL)", id = "93876704559783"},
+    },
+    Hindi = {
+        {name = "Kya Mujhe Pyaar Hain", id = "90093811194361"},
+        {name = "Sheesha", id = "116752232238483"},
+        {name = "Tere Sang Chalu", id = "122576339336819"},
+    },
+    Bhojpuri = {
+        {name = "Lamba Lamba Ghughat", id = "78431826650714"},
+        {name = "Balam Ke Pichkari", id = "89700384406008"},
+        {name = "Kunj Bihari", id = "108588298945210"},
+    },
+    Phonk = {
+        {name = "FK HIM FK HER", id = "108009164504890"},
+        {name = "idk", id = "73241684077534"},
+        {name = "Rakai Turn Up", id = "120314325198233"},
+        {name = "Controlled Distortion", id = "97250551932353"},
+    },
+    MultiLang = {
+        {name = "Chhogada", id = "132817140436217"},
+        {name = "He Ranglo", id = "128232876294868"},
+        {name = "Maa Durga", id = "82446868166514"},
+        {name = "Jaago Maa Durga", id = "89047007812046"},
+        {name = "Kadhal Muttal", id = "97407313818909"},
+    },
+    Sounds = {
+        {name = "TeriMakaBho#da", id = "129697356456437"},
+        {name = "No-No-No (Indian)", id = "121961116892477"},
+        {name = "S-SariRoti", id = "9075261161"},
+    },
+}
+
 local GLOBAL_FIREBASE_URL = "https://grimcouncilcommunicator-default-rtdb.asia-southeast1.firebasedatabase.app/"
 local GLOBAL_MESSAGES_ENDPOINT = GLOBAL_FIREBASE_URL .. "global_chat/messages.json"
 
@@ -755,49 +801,62 @@ baseStickers = uniqueStickers
 -- HARDCODED RANKS & DEFAULT STYLES
 -- ============================================================================
 local RANK_STYLES = {
-    ["Architect"] = { Start = Color3.fromRGB(255, 40, 40), End = Color3.fromRGB(80, 0, 0), Name = Color3.fromRGB(255, 90, 90), Speed = 0.8 },
-    ["Overseer"] = { Start = Color3.fromRGB(255, 80, 80), End = Color3.fromRGB(80, 0, 0), Name = Color3.fromRGB(255, 120, 120), Speed = 0.9 },
-    ["Moderator"] = { Start = Color3.fromRGB(255, 165, 0), End = Color3.fromRGB(100, 35, 0), Name = Color3.fromRGB(255, 190, 70), Speed = 1.0 },
-    ["Developer"] = { Start = Color3.fromRGB(0, 220, 255), End = Color3.fromRGB(0, 40, 100), Name = Color3.fromRGB(80, 235, 255), Speed = 0.9 },
-    ["Hacker"] = { Start = Color3.fromRGB(0, 255, 80), End = Color3.fromRGB(0, 60, 0), Name = Color3.fromRGB(80, 255, 120), Speed = 0.75 },
-    ["BOT"] = { Start = Color3.fromRGB(255, 70, 70), End = Color3.fromRGB(30, 0, 0), Name = Color3.fromRGB(255, 110, 110), Speed = 0.7 },
-    ["One of the OGs👑"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(100, 45, 0), Name = Color3.fromRGB(255, 230, 80), Speed = 1.0 },
-    ["COM-GOD⛓️"] = { Start = Color3.fromRGB(220, 220, 220), End = Color3.fromRGB(40, 40, 40), Name = Color3.fromRGB(245, 245, 245), Speed = 1.1 },
-    ["Regent of Clan🔥"] = { Start = Color3.fromRGB(255, 100, 0), End = Color3.fromRGB(90, 0, 0), Name = Color3.fromRGB(255, 150, 40), Speed = 1.0 },
-    ["Carnage🩸"] = { Start = Color3.fromRGB(220, 0, 0), End = Color3.fromRGB(60, 0, 0), Name = Color3.fromRGB(255, 50, 50), Speed = 1.0 },
-    ["Psychopath💀"] = { Start = Color3.fromRGB(190, 40, 80), End = Color3.fromRGB(50, 0, 20), Name = Color3.fromRGB(255, 80, 120), Speed = 0.8 },
-    ["Manipulator😈"] = { Start = Color3.fromRGB(170, 70, 255), End = Color3.fromRGB(40, 0, 80), Name = Color3.fromRGB(210, 120, 255), Speed = 0.9 },
-    ["Narcissist"] = { Start = Color3.fromRGB(255, 20, 120), End = Color3.fromRGB(70, 0, 40), Name = Color3.fromRGB(255, 90, 170), Speed = 1.0 },
-    ["BATMAN🦇"] = { Start = Color3.fromRGB(80, 100, 255), End = Color3.fromRGB(10, 10, 30), Name = Color3.fromRGB(140, 160, 255), Speed = 1.0 },
-    ["PIRATE·KING🏴‍☠️"] = { Start = Color3.fromRGB(0, 220, 180), End = Color3.fromRGB(0, 50, 50), Name = Color3.fromRGB(80, 255, 220), Speed = 0.9 },
-    ["HOMELANDER🇺🇸"] = { Start = Color3.fromRGB(30, 100, 255), End = Color3.fromRGB(120, 0, 0), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
-    ["SUPER·SAYAN"] = { Start = Color3.fromRGB(255, 220, 40), End = Color3.fromRGB(255, 80, 0), Name = Color3.fromRGB(255, 245, 130), Speed = 0.75 },
-    ["POOKIE🎀"] = { Start = Color3.fromRGB(255, 120, 190), End = Color3.fromRGB(100, 0, 60), Name = Color3.fromRGB(255, 190, 220), Speed = 1.0 },
-    ["MALKIN🌸"] = { Start = Color3.fromRGB(255, 100, 180), End = Color3.fromRGB(90, 0, 70), Name = Color3.fromRGB(255, 180, 220), Speed = 1.0 },
-    ["HAWTIE🥵"] = { Start = Color3.fromRGB(255, 70, 40), End = Color3.fromRGB(120, 0, 0), Name = Color3.fromRGB(255, 150, 100), Speed = 0.9 },
-    ["GOAT🐐"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(90, 90, 90), Name = Color3.fromRGB(255, 240, 120), Speed = 1.0 },
-    ["SCHOOL-CRUSH😍"] = { Start = Color3.fromRGB(255, 100, 170), End = Color3.fromRGB(80, 0, 80), Name = Color3.fromRGB(255, 190, 230), Speed = 1.0 },
-    ["SPANKER☠️"] = { Start = Color3.fromRGB(180, 180, 180), End = Color3.fromRGB(30, 30, 30), Name = Color3.fromRGB(240, 240, 240), Speed = 1.0 },
-    ["DADDY🎅"] = { Start = Color3.fromRGB(255, 100, 0), End = Color3.fromRGB(120, 0, 0), Name = Color3.fromRGB(255, 180, 100), Speed = 1.0 },
-    ["Princess🩹"] = { Start = Color3.fromRGB(255, 150, 190), End = Color3.fromRGB(90, 40, 70), Name = Color3.fromRGB(255, 205, 225), Speed = 1.0 },
-    ["CODM🎮"] = { Start = Color3.fromRGB(80, 180, 255), End = Color3.fromRGB(0, 40, 100), Name = Color3.fromRGB(150, 220, 255), Speed = 1.0 },
-    ["BGMI·CONQUEROR🏅"] = { Start = Color3.fromRGB(255, 190, 40), End = Color3.fromRGB(90, 50, 0), Name = Color3.fromRGB(255, 225, 100), Speed = 0.9 },
-    ["FF·HEROIC🔫"] = { Start = Color3.fromRGB(255, 80, 40), End = Color3.fromRGB(80, 0, 0), Name = Color3.fromRGB(255, 160, 100), Speed = 0.9 },
-    ["BADMASH🚬"] = { Start = Color3.fromRGB(200, 200, 200), End = Color3.fromRGB(50, 50, 50), Name = Color3.fromRGB(255, 255, 255), Speed = 1.0 },
-    ["BADNAM🥀"] = { Start = Color3.fromRGB(210, 40, 80), End = Color3.fromRGB(60, 0, 20), Name = Color3.fromRGB(255, 100, 130), Speed = 1.0 },
-    ["LifeLess🥶"] = { Start = Color3.fromRGB(80, 200, 255), End = Color3.fromRGB(0, 50, 100), Name = Color3.fromRGB(170, 240, 255), Speed = 1.0 },
-    ["Majdoor⛑️"] = { Start = Color3.fromRGB(255, 100, 40), End = Color3.fromRGB(90, 20, 0), Name = Color3.fromRGB(255, 170, 100), Speed = 1.0 },
-    ["SIGMA🐺"] = { Start = Color3.fromRGB(150, 150, 160), End = Color3.fromRGB(20, 20, 30), Name = Color3.fromRGB(230, 230, 240), Speed = 0.9 },
-    ["ELITE"] = { Start = Color3.fromRGB(190, 70, 255), End = Color3.fromRGB(50, 0, 90), Name = Color3.fromRGB(225, 150, 255), Speed = 1.0 },
-    ["VIP"] = { Start = Color3.fromRGB(255, 215, 0), End = Color3.fromRGB(120, 60, 0), Name = Color3.fromRGB(255, 235, 100), Speed = 1.0 },
-    ["HASIRA"] = { Start = Color3.fromRGB(80, 220, 210), End = Color3.fromRGB(80, 220, 210), Name = Color3.fromRGB(80, 220, 210), Speed = 1.0, NoAnimation = true },
-    ["DEVIL"] = { Start = Color3.fromRGB(220, 70, 30), End = Color3.fromRGB(220, 70, 30), Name = Color3.fromRGB(220, 70, 30), Speed = 1.0, NoAnimation = true },
-    ["MONARCH"] = { Start = Color3.fromRGB(80, 110, 255), End = Color3.fromRGB(80, 110, 255), Name = Color3.fromRGB(80, 110, 255), Speed = 1.0, NoAnimation = true },
-    ["SAGE OF SIX PATHS"] = { Start = Color3.fromRGB(190, 150, 255), End = Color3.fromRGB(190, 150, 255), Name = Color3.fromRGB(190, 150, 255), Speed = 1.0, NoAnimation = true },
-    ["DEMON"] = { Start = Color3.fromRGB(190, 40, 80), End = Color3.fromRGB(190, 40, 80), Name = Color3.fromRGB(190, 40, 80), Speed = 1.0, NoAnimation = true },
-    ["Hokage"] = { Start = Color3.fromRGB(70, 190, 255), End = Color3.fromRGB(70, 190, 255), Name = Color3.fromRGB(70, 190, 255), Speed = 1.0, NoAnimation = true },
-    ["Soul Reaper"] = { Start = Color3.fromRGB(0, 220, 255), End = Color3.fromRGB(0, 220, 255), Name = Color3.fromRGB(0, 220, 255), Speed = 1.0, NoAnimation = true },
-    ["Infinite Void"] = { Start = Color3.fromRGB(120, 80, 255), End = Color3.fromRGB(120, 80, 255), Name = Color3.fromRGB(120, 80, 255), Speed = 1.0, NoAnimation = true },
+    -- TIER 1: Super High Ranks
+    -- Full neon spectrum -> pure white, moving left-to-right.
+    ["Architect"] = { Tier = 1, Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 0.75, Mode = "RAINBOW_WHITE" },
+    ["Overseer"] = { Tier = 1, Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 0.75, Mode = "RAINBOW_WHITE" },
+    ["Developer"] = { Tier = 1, Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 0.75, Mode = "RAINBOW_WHITE" },
+    ["One of the OGs👑"] = { Tier = 1, Start = Color3.fromRGB(255, 0, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 255, 255), Speed = 0.75, Mode = "RAINBOW_WHITE" },
+
+    -- TIER 2: High / Elite Ranks
+    -- Primary color -> requested secondary color, moving left-to-right.
+    ["COM-GOD⛓️"] = { Tier = 2, Start = Color3.fromRGB(255, 190, 45), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 245, 190), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["Disbander"] = { Tier = 2, Start = Color3.fromRGB(180, 0, 25), End = Color3.fromRGB(35, 35, 35), Name = Color3.fromRGB(255, 80, 90), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["Moderator"] = { Tier = 2, Start = Color3.fromRGB(255, 95, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 190, 120), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["Hacker"] = { Tier = 2, Start = Color3.fromRGB(0, 255, 55), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(150, 255, 170), Speed = 0.8, Mode = "PRIMARY_SECONDARY" },
+    ["Regent of Clan🔥"] = { Tier = 2, Start = Color3.fromRGB(255, 35, 0), End = Color3.fromRGB(35, 35, 35), Name = Color3.fromRGB(255, 100, 70), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["Psychopath💀"] = { Tier = 2, Start = Color3.fromRGB(255, 55, 15), End = Color3.fromRGB(5, 5, 5), Name = Color3.fromRGB(255, 120, 80), Speed = 0.8, Mode = "PRIMARY_SECONDARY" },
+    ["BATMAN🦇"] = { Tier = 2, Start = Color3.fromRGB(20, 85, 255), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(150, 190, 255), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["MALKIN🌸"] = { Tier = 2, Start = Color3.fromRGB(255, 20, 150), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 150, 220), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["DADDY🎅"] = { Tier = 2, Start = Color3.fromRGB(255, 105, 0), End = Color3.fromRGB(35, 35, 35), Name = Color3.fromRGB(255, 175, 90), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["SPANKER☠️"] = { Tier = 2, Start = Color3.fromRGB(225, 225, 225), End = Color3.fromRGB(5, 5, 5), Name = Color3.fromRGB(245, 245, 245), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["गबरू"] = { Tier = 2, Start = Color3.fromRGB(255, 210, 0), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 235, 90), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["जाट"] = { Tier = 2, Start = Color3.fromRGB(190, 0, 35), End = Color3.fromRGB(35, 35, 35), Name = Color3.fromRGB(255, 90, 110), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["दानव"] = { Tier = 2, Start = Color3.fromRGB(125, 0, 20), End = Color3.fromRGB(5, 5, 5), Name = Color3.fromRGB(220, 45, 55), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["देवता"] = { Tier = 2, Start = Color3.fromRGB(255, 220, 65), End = Color3.fromRGB(255, 255, 255), Name = Color3.fromRGB(255, 240, 130), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+    ["खलनायक"] = { Tier = 2, Start = Color3.fromRGB(175, 0, 255), End = Color3.fromRGB(5, 5, 5), Name = Color3.fromRGB(215, 100, 255), Speed = 0.85, Mode = "PRIMARY_SECONDARY" },
+
+    -- TIER 3: All Remaining Ranks
+    -- Entire font color loops from signature color -> pitch black -> signature color.
+    ["Carnage🩸"] = { Tier = 3, Start = Color3.fromRGB(220, 0, 25), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 60, 70), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Manipulator😈"] = { Tier = 3, Start = Color3.fromRGB(125, 45, 220), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(190, 100, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Narcissist"] = { Tier = 3, Start = Color3.fromRGB(225, 20, 120), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 90, 175), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["PIRATE·KING🏴‍☠️"] = { Tier = 3, Start = Color3.fromRGB(0, 220, 205), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(90, 255, 240), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["HOMELANDER🇺🇸"] = { Tier = 3, Start = Color3.fromRGB(25, 70, 180), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(90, 140, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["SUPER·SAYAN"] = { Tier = 3, Start = Color3.fromRGB(255, 205, 35), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 235, 100), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["POOKIE🎀"] = { Tier = 3, Start = Color3.fromRGB(255, 175, 210), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 205, 225), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["HAWTIE🥵"] = { Tier = 3, Start = Color3.fromRGB(255, 105, 80), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 155, 130), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["GOAT🐐"] = { Tier = 3, Start = Color3.fromRGB(205, 175, 35), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(240, 220, 100), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["SCHOOL-CRUSH😍"] = { Tier = 3, Start = Color3.fromRGB(215, 80, 175), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(245, 150, 220), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Princess🩹"] = { Tier = 3, Start = Color3.fromRGB(255, 185, 210), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 215, 230), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["CODM🎮"] = { Tier = 3, Start = Color3.fromRGB(80, 180, 255), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(145, 220, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["BGMI·CONQUEROR🏅"] = { Tier = 3, Start = Color3.fromRGB(255, 205, 25), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 225, 90), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["FF·HEROIC🔫"] = { Tier = 3, Start = Color3.fromRGB(255, 95, 25), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 155, 80), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["BADMASH🚬"] = { Tier = 3, Start = Color3.fromRGB(165, 170, 180), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(225, 225, 230), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["BADNAM🥀"] = { Tier = 3, Start = Color3.fromRGB(205, 35, 70), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(245, 90, 120), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["LifeLess🥶"] = { Tier = 3, Start = Color3.fromRGB(175, 225, 245), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(205, 240, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Majdoor⛑️"] = { Tier = 3, Start = Color3.fromRGB(225, 105, 45), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 160, 90), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["SIGMA🐺"] = { Tier = 3, Start = Color3.fromRGB(125, 140, 155), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(205, 215, 225), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["ELITE"] = { Tier = 3, Start = Color3.fromRGB(185, 115, 255), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(220, 170, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["VIP"] = { Tier = 3, Start = Color3.fromRGB(225, 190, 45), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 225, 100), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["BOT"] = { Tier = 3, Start = Color3.fromRGB(255, 185, 190), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(255, 215, 220), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["HASIRA"] = { Tier = 3, Start = Color3.fromRGB(90, 220, 200), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(135, 240, 225), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["DEVIL"] = { Tier = 3, Start = Color3.fromRGB(150, 55, 30), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(205, 80, 50), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["MONARCH"] = { Tier = 3, Start = Color3.fromRGB(55, 90, 220), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(110, 145, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["SAGE OF SIX PATHS"] = { Tier = 3, Start = Color3.fromRGB(145, 80, 220), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(195, 135, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["DEMON"] = { Tier = 3, Start = Color3.fromRGB(155, 20, 45), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(215, 50, 75), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Hokage"] = { Tier = 3, Start = Color3.fromRGB(50, 150, 235), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(110, 200, 255), Speed = 1.0, Mode = "FONT_LOOP" },
+    ["Soul Reaper"] = { Tier = 3, Start = Color3.fromRGB(0, 215, 245), End = Color3.fromRGB(0, 0, 0), Name = Color3.fromRGB(100, 235, 255), Speed = 1.0, Mode = "FONT_LOOP" },
 }
 -- ============================================================================
 -- ROLE/TAG FONT ANIMATION
@@ -811,23 +870,95 @@ local RANK_STYLES = {
 local function AnimateRoleFont(textObject, roleName, style)
     if not textObject or not textObject.Parent then return end
     style = style or RANK_STYLES[roleName] or RANK_STYLES["VIP"]
-    if style.NoAnimation then
-        textObject.TextColor3 = style.Name or style.Start
+
+    -- Remove any previous role gradient attached to this object.
+    local oldGradient = textObject:FindFirstChild("KronosRoleGradient")
+    if oldGradient then oldGradient:Destroy() end
+
+    local mode = style.Mode or "FONT_LOOP"
+    local duration = tonumber(style.Speed) or 1.0
+    local startColor = style.Start or style.Name or Color3.new(1, 1, 1)
+    local endColor = style.End or Color3.new(0, 0, 0)
+
+    if mode == "RAINBOW_WHITE" then
+        -- Tier 1: continuous neon spectrum sweeping into white.
+        local gradient = Instance.new("UIGradient")
+        gradient.Name = "KronosRoleGradient"
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 0, 180)),
+            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(70, 0, 255)),
+            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 220, 255)),
+            ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 255, 90)),
+            ColorSequenceKeypoint.new(0.82, Color3.fromRGB(255, 240, 0)),
+            ColorSequenceKeypoint.new(0.93, Color3.fromRGB(255, 70, 0)),
+            ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 255, 255)),
+        })
+        gradient.Rotation = 0
+        gradient.Parent = textObject
+
+        task.spawn(function()
+            local offset = -1
+            while textObject and textObject.Parent and gradient and gradient.Parent do
+                local tween = TweenService:Create(
+                    gradient,
+                    TweenInfo.new(duration * 2.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut),
+                    {Offset = Vector2.new(2, 0)}
+                )
+                gradient.Offset = Vector2.new(offset, 0)
+                tween:Play()
+                tween.Completed:Wait()
+                offset = -1
+            end
+        end)
         return
     end
 
-    local duration = tonumber(style.Speed) or 1.2
-    local startColor = style.Start or style.Name or Color3.new(1,1,1)
-    local endColor = style.End or startColor
-    textObject.TextColor3 = startColor
+    if mode == "PRIMARY_SECONDARY" then
+        -- Tier 2: primary -> secondary sweep, then loops back left-to-right.
+        local gradient = Instance.new("UIGradient")
+        gradient.Name = "KronosRoleGradient"
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.00, startColor),
+            ColorSequenceKeypoint.new(0.50, endColor),
+            ColorSequenceKeypoint.new(1.00, startColor),
+        })
+        gradient.Rotation = 0
+        gradient.Parent = textObject
 
+        task.spawn(function()
+            while textObject and textObject.Parent and gradient and gradient.Parent do
+                gradient.Offset = Vector2.new(-1, 0)
+                local tween = TweenService:Create(
+                    gradient,
+                    TweenInfo.new(duration * 2.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut),
+                    {Offset = Vector2.new(1, 0)}
+                )
+                tween:Play()
+                tween.Completed:Wait()
+            end
+        end)
+        return
+    end
+
+    -- Tier 3: entire font smoothly loops from signature color to black.
+    textObject.TextColor3 = startColor
     task.spawn(function()
         while textObject and textObject.Parent do
-            local toEnd = TweenService:Create(textObject, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextColor3 = endColor})
-            toEnd:Play()
-            toEnd.Completed:Wait()
+            local toBlack = TweenService:Create(
+                textObject,
+                TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {TextColor3 = endColor}
+            )
+            toBlack:Play()
+            toBlack.Completed:Wait()
             if not textObject or not textObject.Parent then break end
-            local toStart = TweenService:Create(textObject, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextColor3 = startColor})
+
+            local toStart = TweenService:Create(
+                textObject,
+                TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                {TextColor3 = startColor}
+            )
             toStart:Play()
             toStart.Completed:Wait()
         end
@@ -989,387 +1120,26 @@ local function HttpRequest(url, method, data)
 end
 
 -- ============================================================================
--- MUSIC SESSION SYSTEM
--- Client-local audio synchronized through a lightweight Firebase session state.
--- The session host is the only client allowed by this script to publish playback
--- or queue changes; listeners can only join, leave, and mute locally.
--- ============================================================================
-local MUSIC_DB_URL = "https://raw.githubusercontent.com/basementfox98/DBforS2/main/db2"
-local MUSIC_SESSION_FIREBASE_URL = GLOBAL_FIREBASE_URL .. "music_sessions/"
-local MUSIC_SESSION_POLL_INTERVAL = 2
-local MUSIC_HEARTBEAT_INTERVAL = 10
-local MUSIC_SESSION_TTL = 45
-
-local MUSIC_FALLBACK_DATABASE = {
-    Songs = {
-        {name = "Memory Reboot", id = "105158334993991"},
-        {name = "Monster", id = "140021357514406"},
-        {name = "It was good day", id = "79622922062181"},
-        {name = "Blue Young Kai", id = "84729628311938"},
-        {name = "Love Story", id = "135528953872601"},
-        {name = "UNLEAKED SONG (FINAL)", id = "93876704559783"},
-    },
-    Hindi = {
-        {name = "Kya Mujhe Pyaar Hain", id = "90093811194361"},
-        {name = "Sheesha", id = "116752232238483"},
-        {name = "Tere Sang Chalu", id = "122576339336819"},
-    },
-    Bhojpuri = {
-        {name = "Lamba Lamba Ghughat", id = "78431826650714"},
-        {name = "Balam Ke Pichkari", id = "89700384406008"},
-        {name = "Kunj Bihari", id = "108588298945210"},
-    },
-    Phonk = {
-        {name = "FK HIM FK HER", id = "108009164504890"},
-        {name = "idk", id = "73241684077534"},
-        {name = "Rakai Turn Up", id = "120314325198233"},
-        {name = "Controlled Distortion", id = "97250551932353"},
-    },
-    MultiLang = {
-        {name = "Chhogada", id = "132817140436217"},
-        {name = "He Ranglo", id = "128232876294868"},
-        {name = "Maa Durga", id = "82446868166514"},
-        {name = "Jaago Maa Durga", id = "89047007812046"},
-        {name = "Kadhal Muttal", id = "97407313818909"},
-    },
-    Sounds = {
-        {name = "TeriMakaBho#da", id = "129697356456437"},
-        {name = "No-No-No (Indian)", id = "121961116892477"},
-        {name = "S-SariRoti", id = "9075261161"},
-    },
-}
-
-local MusicDatabase = MUSIC_FALLBACK_DATABASE
-local MusicSessionId = nil
-local MusicSessionData = nil
-local MusicMuted = false
-local MusicCurrentNonce = nil
-local MusicSound = nil
-local MusicDatabaseLoaded = false
-local MusicUIRefresh = nil
-local MusicStatus = nil
-
-local function NormalizeMusicDatabase(data)
-    if type(data) ~= "table" then return nil end
-    local normalized = {}
-    local found = false
-    for category, songs in pairs(data) do
-        if type(songs) == "table" then
-            normalized[tostring(category)] = {}
-            for _, song in ipairs(songs) do
-                if type(song) == "table" and song.id and song.name then
-                    table.insert(normalized[tostring(category)], {
-                        id = tostring(song.id),
-                        name = tostring(song.name),
-                    })
-                    found = true
-                end
-            end
-        end
-    end
-    return found and normalized or nil
-end
-
-local function LoadMusicDatabase()
-    task.spawn(function()
-        local remote = HttpRequest(MUSIC_DB_URL, "GET")
-        local normalized = NormalizeMusicDatabase(remote)
-        if normalized then
-            MusicDatabase = normalized
-            MusicDatabaseLoaded = true
-            if MusicUIRefresh then pcall(MusicUIRefresh) end
-        end
-    end)
-end
-
-local function GenerateMusicSessionId()
-    return string.upper(string.format("%06d", math.random(0, 999999)))
-end
-
-local function MusicSessionUrl(sessionId, suffix)
-    return MUSIC_SESSION_FIREBASE_URL .. tostring(sessionId) .. (suffix or "") .. ".json"
-end
-
-local function IsMusicSessionHost()
-    return MusicSessionData ~= nil and tonumber(MusicSessionData.HostUserId) == tonumber(LocalPlayer.UserId)
-end
-
-local function StopMusicPlayback()
-    if MusicSound then
-        pcall(function() MusicSound:Stop() end)
-    end
-    MusicCurrentNonce = nil
-end
-
-local function EnsureMusicSound()
-    if MusicSound and MusicSound.Parent then return MusicSound end
-    local SoundService = game:GetService("SoundService")
-    MusicSound = Instance.new("Sound")
-    MusicSound.Name = "KronosMusicSessionPlayer"
-    MusicSound.Volume = MusicMuted and 0 or 0.5
-    MusicSound.Looped = false
-    MusicSound.Parent = SoundService
-    return MusicSound
-end
-
-local function PlayMusicLocally(songId, startedAt, nonce)
-    local sound = EnsureMusicSound()
-    local numericId = tostring(songId or ""):match("%d+")
-    if not numericId or numericId == "" then return end
-
-    MusicCurrentNonce = nonce
-    sound.Volume = MusicMuted and 0 or 0.5
-    sound.SoundId = "rbxassetid://" .. numericId
-    pcall(function() sound:Stop() end)
-    pcall(function() sound.TimePosition = 0 end)
-    pcall(function() sound:Play() end)
-
-    -- Compensate for Firebase polling/network delay when Roblox exposes the
-    -- audio length. This is best-effort and never blocks playback indefinitely.
-    if tonumber(startedAt) then
-        task.spawn(function()
-            local deadline = os.clock() + 4
-            while sound.Parent and not sound.IsLoaded and os.clock() < deadline do
-                task.wait(0.1)
-            end
-            if sound.Parent and sound.IsLoaded and sound.TimeLength > 0 and MusicCurrentNonce == nonce then
-                local elapsed = math.max(0, os.time() - tonumber(startedAt))
-                if elapsed < sound.TimeLength then
-                    pcall(function() sound.TimePosition = elapsed end)
-                end
-            end
-        end)
-    end
-end
-
-local function PushMusicSessionState(state)
-    if not MusicSessionId or not IsMusicSessionHost() then return false end
-    state = state or MusicSessionData or {}
-    state.HostUserId = LocalPlayer.UserId
-    state.HostUsername = LocalPlayer.Name
-    state.HostDisplayName = LocalPlayer.DisplayName
-    state.LastHeartbeat = os.time()
-    MusicSessionData = state
-    local response = HttpRequest(MusicSessionUrl(MusicSessionId), "PUT", state)
-    return response ~= nil
-end
-
-local function WriteMusicMemberPresence(joined)
-    if not MusicSessionId then return end
-    local url = MusicSessionUrl(MusicSessionId, "/members/" .. tostring(LocalPlayer.UserId))
-    if joined then
-        HttpRequest(url, "PUT", {
-            UserId = LocalPlayer.UserId,
-            Username = LocalPlayer.Name,
-            DisplayName = LocalPlayer.DisplayName,
-            JoinedAt = os.time(),
-            LastSeen = os.time(),
-        })
-    else
-        HttpRequest(url, "DELETE")
-    end
-end
-
-local function LeaveMusicSession(showMessage)
-    if not MusicSessionId then return end
-    local oldId = MusicSessionId
-    local wasHost = IsMusicSessionHost()
-    WriteMusicMemberPresence(false)
-    if wasHost then
-        -- Deleting the session makes the session ID immediately invalid for new joins.
-        HttpRequest(MusicSessionUrl(oldId), "DELETE")
-    end
-    MusicSessionId = nil
-    MusicSessionData = nil
-    MusicCurrentNonce = nil
-    StopMusicPlayback()
-    if MusicStatus then MusicStatus.Text = "No music session joined." end
-    if MusicUIRefresh then pcall(MusicUIRefresh) end
-    if showMessage and type(ShowLocalSystemMessage) == "function" then
-        ShowLocalSystemMessage("[Music Session] You left the session.", false)
-    end
-end
-
-JoinMusicSession = function(rawId)
-    local id = tostring(rawId or ""):upper():gsub("%s+", "")
-    if not id:match("^%d%d%d%d%d%d$") then
-        if MusicStatus then MusicStatus.Text = "Invalid session ID. Use the 6-digit code." end
-        return false
-    end
-
-    local data = HttpRequest(MusicSessionUrl(id), "GET")
-    if type(data) ~= "table" or not data.HostUserId then
-        if MusicStatus then MusicStatus.Text = "Session not found or expired." end
-        return false
-    end
-    if tonumber(data.LastHeartbeat or data.CreatedAt or 0) > 0 and os.time() - tonumber(data.LastHeartbeat or data.CreatedAt) > MUSIC_SESSION_TTL then
-        if MusicStatus then MusicStatus.Text = "That music session has expired." end
-        return false
-    end
-
-    if MusicSessionId and MusicSessionId ~= id then
-        LeaveMusicSession(false)
-    end
-
-    MusicSessionId = id
-    MusicSessionData = data
-    WriteMusicMemberPresence(true)
-    if MusicStatus then MusicStatus.Text = "Joined session " .. id .. " • Host: " .. tostring(data.HostDisplayName or data.HostUsername or "Unknown") end
-    if MusicUIRefresh then pcall(MusicUIRefresh) end
-    if type(ShowLocalSystemMessage) == "function" then
-        ShowLocalSystemMessage("[Music Session] Joined " .. id .. " • Host: " .. tostring(data.HostDisplayName or data.HostUsername or "Unknown"), false)
-    end
-    return true
-end
-
-local function CreateMusicSession()
-    if MusicSessionId then LeaveMusicSession(false) end
-
-    -- Avoid overwriting an already-live session if the random six-digit code collides.
-    local id = nil
-    for _ = 1, 8 do
-        local candidate = GenerateMusicSessionId()
-        local existing = HttpRequest(MusicSessionUrl(candidate), "GET")
-        if type(existing) ~= "table" or not existing.HostUserId then
-            id = candidate
-            break
-        end
-    end
-    if not id then
-        if MusicStatus then MusicStatus.Text = "Could not allocate a unique session ID. Try again." end
-        return false
-    end
-
-    local state = {
-        HostUserId = LocalPlayer.UserId,
-        HostUsername = LocalPlayer.Name,
-        HostDisplayName = LocalPlayer.DisplayName,
-        CreatedAt = os.time(),
-        LastHeartbeat = os.time(),
-        Current = nil,
-        Queue = {},
-        Nonce = tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999)),
-    }
-    local result = HttpRequest(MusicSessionUrl(id), "PUT", state)
-    if result == nil then
-        if MusicStatus then MusicStatus.Text = "Could not create session (HTTP unavailable)." end
-        return false
-    end
-    MusicSessionId = id
-    MusicSessionData = state
-    MusicMuted = false
-    EnsureMusicSound().Volume = 0.5
-    WriteMusicMemberPresence(true)
-    if MusicStatus then MusicStatus.Text = "HOSTING " .. id .. " • Only you can control playback." end
-    if MusicUIRefresh then pcall(MusicUIRefresh) end
-    if type(ShowLocalSystemMessage) == "function" then
-        ShowLocalSystemMessage("[Music Session] Created session " .. id .. ". You are the host.", false)
-    end
-    return true
-end
-
-local function HostPlaySong(songName, songId, fromQueue)
-    if not IsMusicSessionHost() then
-        if MusicStatus then MusicStatus.Text = "Only the session host can play music." end
-        return false
-    end
-    local id = tostring(songId or ""):match("%d+")
-    if not id then return false end
-    local name = tostring(songName or ("Music ID " .. id))
-    local nonce = tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999))
-    MusicSessionData.Current = {
-        Id = id,
-        Name = name,
-        StartedAt = os.time(),
-        Nonce = nonce,
-    }
-    if fromQueue then
-        MusicSessionData.Queue = MusicSessionData.Queue or {}
-    end
-    local synced = PushMusicSessionState(MusicSessionData)
-    PlayMusicLocally(id, MusicSessionData.Current.StartedAt, nonce)
-    if MusicStatus then
-        MusicStatus.Text = synced and ("▶ " .. name .. " [" .. id .. "]") or ("▶ " .. name .. " [" .. id .. "] • sync failed")
-    end
-    if MusicUIRefresh then pcall(MusicUIRefresh) end
-    return true
-end
-
-local function HostQueueSong(songName, songId)
-    if not IsMusicSessionHost() then
-        if MusicStatus then MusicStatus.Text = "Only the session host can edit the queue." end
-        return false
-    end
-    local id = tostring(songId or ""):match("%d+")
-    if not id then return false end
-    MusicSessionData.Queue = MusicSessionData.Queue or {}
-    table.insert(MusicSessionData.Queue, {Name = tostring(songName or ("Music ID " .. id)), Id = id})
-    PushMusicSessionState(MusicSessionData)
-    if MusicStatus then MusicStatus.Text = "Queued: " .. tostring(songName or id) end
-    if MusicUIRefresh then pcall(MusicUIRefresh) end
-    return true
-end
-
-local function HostPlayNext()
-    if not IsMusicSessionHost() then return end
-    local queue = MusicSessionData and MusicSessionData.Queue or {}
-    if #queue == 0 then
-        MusicSessionData.Current = nil
-        PushMusicSessionState(MusicSessionData)
-        StopMusicPlayback()
-        if MusicStatus then MusicStatus.Text = "Queue finished." end
-        if MusicUIRefresh then pcall(MusicUIRefresh) end
-        return
-    end
-    local nextSong = table.remove(queue, 1)
-    MusicSessionData.Queue = queue
-    HostPlaySong(nextSong.Name, nextSong.Id, true)
-end
-
-local function InviteMusicSession(scope)
-    if not MusicSessionId then
-        if MusicStatus then MusicStatus.Text = "Create or join a music session first." end
-        return
-    end
-    local endpoint = scope == "SERVER" and SERVER_MESSAGES_ENDPOINT or GLOBAL_MESSAGES_ENDPOINT
-    local payload = {
-        ClientMessageId = LocalPlayer.UserId .. "_musicinvite_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999)),
-        Username = LocalPlayer.Name,
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
-        Text = "invited you to join Music Session #" .. MusicSessionId,
-        Timestamp = os.time(),
-        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
-        PfpId = CurrentPfpId,
-        IsPrivate = false,
-        IsMusicInvite = true,
-        MusicSessionId = MusicSessionId,
-        MusicHostUserId = LocalPlayer.UserId,
-        MusicHostDisplayName = LocalPlayer.DisplayName,
-    }
-    task.spawn(function()
-        HttpRequest(endpoint, "POST", payload)
-    end)
-    if MusicStatus then MusicStatus.Text = "Invite sent to " .. string.upper(scope) .. " chat." end
-end
-
--- Load the public song database without making the UI dependent on it.
-LoadMusicDatabase()
-
--- ============================================================================
 -- DYNAMIC ROLE AUTHORITY / PRIORITY
 -- The GitHub roster is authoritative. ROLE_PRIORITY is the hierarchy used when
 -- a player appears in more than one role. Earlier entries have higher priority.
 -- ============================================================================
 local ROLE_PRIORITY = {
-    "Architect", "Overseer", "Moderator", "Developer", "Hacker", "BOT",
-    "One of the OGs👑", "COM-GOD⛓️", "Regent of Clan🔥", "Carnage🩸",
-    "Psychopath💀", "Manipulator😈", "Narcissist", "BATMAN🦇",
-    "PIRATE·KING🏴‍☠️", "HOMELANDER🇺🇸", "SUPER·SAYAN", "POOKIE🎀",
-    "MALKIN🌸", "HAWTIE🥵", "GOAT🐐", "SCHOOL-CRUSH😍", "SPANKER☠️",
-    "DADDY🎅", "Princess🩹", "CODM🎮", "BGMI·CONQUEROR🏅", "FF·HEROIC🔫",
-    "BADMASH🚬", "BADNAM🥀", "LifeLess🥶", "Majdoor⛑️", "SIGMA🐺",
-    "ELITE", "VIP", "HASIRA", "DEVIL", "MONARCH", "SAGE OF SIX PATHS",
-    "DEMON", "Hokage", "Soul Reaper", "Infinite Void"
+    -- Tier 1
+    "Architect", "Overseer", "Developer", "One of the OGs👑",
+
+    -- Tier 2
+    "COM-GOD⛓️", "Disbander", "Moderator", "Hacker", "Regent of Clan🔥",
+    "Psychopath💀", "BATMAN🦇", "MALKIN🌸", "DADDY🎅", "SPANKER☠️",
+    "गबरू", "जाट", "दानव", "देवता", "खलनायक",
+
+    -- Tier 3
+    "Carnage🩸", "Manipulator😈", "Narcissist", "PIRATE·KING🏴‍☠️",
+    "HOMELANDER🇺🇸", "SUPER·SAYAN", "POOKIE🎀", "HAWTIE🥵", "GOAT🐐",
+    "SCHOOL-CRUSH😍", "Princess🩹", "CODM🎮", "BGMI·CONQUEROR🏅",
+    "FF·HEROIC🔫", "BADMASH🚬", "BADNAM🥀", "LifeLess🥶", "Majdoor⛑️",
+    "SIGMA🐺", "ELITE", "VIP", "BOT", "HASIRA", "DEVIL", "MONARCH",
+    "SAGE OF SIX PATHS", "DEMON", "Hokage", "Soul Reaper"
 }
 
 local ROLE_PRIORITY_INDEX = {}
@@ -1674,21 +1444,26 @@ local AboutTabCorner = Instance.new("UICorner")
 AboutTabCorner.CornerRadius = UDim.new(0, 8)
 AboutTabCorner.Parent = AboutTabBtn
 
-local MusicTabBtn = Instance.new("TextButton")
-MusicTabBtn.Name = "MusicTabBtn"
-MusicTabBtn.Size = UDim2.new(0, 78, 0, 26)
-MusicTabBtn.Position = UDim2.new(0, 278, 0, 5)
-MusicTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-MusicTabBtn.BackgroundTransparency = 0.4
-MusicTabBtn.Font = Enum.Font.GothamBold
-MusicTabBtn.Text = "♫ MUSIC"
-MusicTabBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
-MusicTabBtn.TextSize = 10
-MusicTabBtn.Parent = HeaderBar
 
-local MusicTabCorner = Instance.new("UICorner")
-MusicTabCorner.CornerRadius = UDim.new(0, 8)
-MusicTabCorner.Parent = MusicTabBtn
+-- ============================================================================
+-- MUSIC SESSION NAVIGATION BUTTON (ADDITIVE)
+-- ============================================================================
+local MusicSessionTabBtn = Instance.new("TextButton")
+MusicSessionTabBtn.Name = "MusicSessionTabBtn"
+MusicSessionTabBtn.Size = UDim2.new(0, 90, 0, 26)
+MusicSessionTabBtn.Position = UDim2.new(0, 279, 0, 5)
+MusicSessionTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+MusicSessionTabBtn.BackgroundTransparency = 0.4
+MusicSessionTabBtn.Font = Enum.Font.GothamBold
+MusicSessionTabBtn.Text = "MUSIC"
+MusicSessionTabBtn.TextColor3 = Color3.fromRGB(180, 180, 190)
+MusicSessionTabBtn.TextSize = 9
+MusicSessionTabBtn.AutoButtonColor = false
+MusicSessionTabBtn.Parent = HeaderBar
+
+local MusicSessionTabCorner = Instance.new("UICorner")
+MusicSessionTabCorner.CornerRadius = UDim.new(0, 8)
+MusicSessionTabCorner.Parent = MusicSessionTabBtn
 
 local KronosHeaderLabel = Instance.new("TextLabel")
 KronosHeaderLabel.Name = "KronosHeaderLabel"
@@ -2490,468 +2265,6 @@ SubmitRequestBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ============================================================================
--- MUSIC SESSION TAB
--- ============================================================================
-local MusicFrame = Instance.new("Frame")
-MusicFrame.Name = "MusicFrame"
-MusicFrame.Size = UDim2.new(1, -16, 1, -48)
-MusicFrame.Position = UDim2.new(0, 8, 0, 40)
-MusicFrame.BackgroundTransparency = 1
-MusicFrame.Visible = false
-MusicFrame.Parent = MainFrame
-
-local MusicTopCard = Instance.new("Frame")
-MusicTopCard.Size = UDim2.new(1, 0, 0, 64)
-MusicTopCard.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-MusicTopCard.BackgroundTransparency = 0.35
-MusicTopCard.BorderSizePixel = 0
-MusicTopCard.Parent = MusicFrame
-local MusicTopCorner = Instance.new("UICorner")
-MusicTopCorner.CornerRadius = UDim.new(0, 8)
-MusicTopCorner.Parent = MusicTopCard
-
-local MusicTitle = Instance.new("TextLabel")
-MusicTitle.Size = UDim2.new(0.5, -8, 0, 20)
-MusicTitle.Position = UDim2.new(0, 10, 0, 6)
-MusicTitle.BackgroundTransparency = 1
-MusicTitle.Font = Enum.Font.GothamBold
-MusicTitle.Text = "♫ MUSIC SESSION"
-MusicTitle.TextColor3 = Color3.fromRGB(255, 70, 70)
-MusicTitle.TextSize = 12
-MusicTitle.TextXAlignment = Enum.TextXAlignment.Left
-MusicTitle.Parent = MusicTopCard
-
-MusicStatus = Instance.new("TextLabel")
-MusicStatus.Size = UDim2.new(0.5, -8, 0, 28)
-MusicStatus.Position = UDim2.new(0, 10, 0, 28)
-MusicStatus.BackgroundTransparency = 1
-MusicStatus.Font = Enum.Font.Gotham
-MusicStatus.Text = "No music session joined."
-MusicStatus.TextColor3 = Color3.fromRGB(200, 200, 215)
-MusicStatus.TextSize = 9
-MusicStatus.TextWrapped = true
-MusicStatus.TextXAlignment = Enum.TextXAlignment.Left
-MusicStatus.Parent = MusicTopCard
-
-local CreateSessionBtn = Instance.new("TextButton")
-CreateSessionBtn.Size = UDim2.new(0, 96, 0, 22)
-CreateSessionBtn.Position = UDim2.new(1, -104, 0, 6)
-CreateSessionBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-CreateSessionBtn.BackgroundTransparency = 0.15
-CreateSessionBtn.Font = Enum.Font.GothamBold
-CreateSessionBtn.Text = "CREATE"
-CreateSessionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CreateSessionBtn.TextSize = 9
-CreateSessionBtn.Parent = MusicTopCard
-local CreateSessionCorner = Instance.new("UICorner")
-CreateSessionCorner.CornerRadius = UDim.new(0, 6)
-CreateSessionCorner.Parent = CreateSessionBtn
-
-local JoinSessionInput = Instance.new("TextBox")
-JoinSessionInput.Size = UDim2.new(0, 96, 0, 22)
-JoinSessionInput.Position = UDim2.new(1, -104, 0, 34)
-JoinSessionInput.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-JoinSessionInput.BackgroundTransparency = 0.2
-JoinSessionInput.Font = Enum.Font.GothamMedium
-JoinSessionInput.PlaceholderText = "6-DIGIT ID"
-JoinSessionInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-JoinSessionInput.Text = ""
-JoinSessionInput.TextColor3 = Color3.fromRGB(240, 240, 245)
-JoinSessionInput.TextSize = 9
-JoinSessionInput.ClearTextOnFocus = false
-JoinSessionInput.TextXAlignment = Enum.TextXAlignment.Center
-JoinSessionInput.Parent = MusicTopCard
-local JoinSessionCorner = Instance.new("UICorner")
-JoinSessionCorner.CornerRadius = UDim.new(0, 6)
-JoinSessionCorner.Parent = JoinSessionInput
-
-local JoinSessionBtn = Instance.new("TextButton")
-JoinSessionBtn.Size = UDim2.new(0, 52, 0, 22)
-JoinSessionBtn.Position = UDim2.new(1, -160, 0, 34)
-JoinSessionBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 75)
-JoinSessionBtn.Font = Enum.Font.GothamBold
-JoinSessionBtn.Text = "JOIN"
-JoinSessionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-JoinSessionBtn.TextSize = 9
-JoinSessionBtn.Parent = MusicTopCard
-local JoinSessionCornerBtn = Instance.new("UICorner")
-JoinSessionCornerBtn.CornerRadius = UDim.new(0, 6)
-JoinSessionCornerBtn.Parent = JoinSessionBtn
-
-local MusicControlCard = Instance.new("Frame")
-MusicControlCard.Size = UDim2.new(1, 0, 0, 56)
-MusicControlCard.Position = UDim2.new(0, 0, 0, 70)
-MusicControlCard.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-MusicControlCard.BackgroundTransparency = 0.35
-MusicControlCard.BorderSizePixel = 0
-MusicControlCard.Parent = MusicFrame
-local MusicControlCorner = Instance.new("UICorner")
-MusicControlCorner.CornerRadius = UDim.new(0, 8)
-MusicControlCorner.Parent = MusicControlCard
-
-local MusicIdInput = Instance.new("TextBox")
-MusicIdInput.Size = UDim2.new(0, 118, 0, 22)
-MusicIdInput.Position = UDim2.new(0, 8, 0, 7)
-MusicIdInput.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-MusicIdInput.BackgroundTransparency = 0.2
-MusicIdInput.Font = Enum.Font.GothamMedium
-MusicIdInput.PlaceholderText = "Music ID"
-MusicIdInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-MusicIdInput.Text = ""
-MusicIdInput.TextColor3 = Color3.fromRGB(240, 240, 245)
-MusicIdInput.TextSize = 9
-MusicIdInput.ClearTextOnFocus = false
-MusicIdInput.Parent = MusicControlCard
-local MusicIdCorner = Instance.new("UICorner")
-MusicIdCorner.CornerRadius = UDim.new(0, 6)
-MusicIdCorner.Parent = MusicIdInput
-
-local MusicNameInput = Instance.new("TextBox")
-MusicNameInput.Size = UDim2.new(0, 128, 0, 22)
-MusicNameInput.Position = UDim2.new(0, 132, 0, 7)
-MusicNameInput.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-MusicNameInput.BackgroundTransparency = 0.2
-MusicNameInput.Font = Enum.Font.GothamMedium
-MusicNameInput.PlaceholderText = "Name (optional)"
-MusicNameInput.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-MusicNameInput.Text = ""
-MusicNameInput.TextColor3 = Color3.fromRGB(240, 240, 245)
-MusicNameInput.TextSize = 9
-MusicNameInput.ClearTextOnFocus = false
-MusicNameInput.Parent = MusicControlCard
-local MusicNameCorner = Instance.new("UICorner")
-MusicNameCorner.CornerRadius = UDim.new(0, 6)
-MusicNameCorner.Parent = MusicNameInput
-
-local PlayMusicBtn = Instance.new("TextButton")
-PlayMusicBtn.Size = UDim2.new(0, 60, 0, 22)
-PlayMusicBtn.Position = UDim2.new(1, -188, 0, 7)
-PlayMusicBtn.BackgroundColor3 = Color3.fromRGB(30, 170, 85)
-PlayMusicBtn.Font = Enum.Font.GothamBold
-PlayMusicBtn.Text = "PLAY"
-PlayMusicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlayMusicBtn.TextSize = 9
-PlayMusicBtn.Parent = MusicControlCard
-local PlayMusicCorner = Instance.new("UICorner")
-PlayMusicCorner.CornerRadius = UDim.new(0, 6)
-PlayMusicCorner.Parent = PlayMusicBtn
-
-local QueueMusicBtn = Instance.new("TextButton")
-QueueMusicBtn.Size = UDim2.new(0, 60, 0, 22)
-QueueMusicBtn.Position = UDim2.new(1, -124, 0, 7)
-QueueMusicBtn.BackgroundColor3 = Color3.fromRGB(65, 75, 110)
-QueueMusicBtn.Font = Enum.Font.GothamBold
-QueueMusicBtn.Text = "QUEUE"
-QueueMusicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-QueueMusicBtn.TextSize = 9
-QueueMusicBtn.Parent = MusicControlCard
-local QueueMusicCorner = Instance.new("UICorner")
-QueueMusicCorner.CornerRadius = UDim.new(0, 6)
-QueueMusicCorner.Parent = QueueMusicBtn
-
-local MusicMuteBtn = Instance.new("TextButton")
-MusicMuteBtn.Size = UDim2.new(0, 60, 0, 22)
-MusicMuteBtn.Position = UDim2.new(1, -60, 0, 7)
-MusicMuteBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-MusicMuteBtn.Font = Enum.Font.GothamBold
-MusicMuteBtn.Text = "MUTE"
-MusicMuteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MusicMuteBtn.TextSize = 9
-MusicMuteBtn.Parent = MusicControlCard
-local MusicMuteCorner = Instance.new("UICorner")
-MusicMuteCorner.CornerRadius = UDim.new(0, 6)
-MusicMuteCorner.Parent = MusicMuteBtn
-
-local LeaveMusicBtn = Instance.new("TextButton")
-LeaveMusicBtn.Size = UDim2.new(0, 60, 0, 22)
-LeaveMusicBtn.Position = UDim2.new(0, 8, 0, 31)
-LeaveMusicBtn.BackgroundColor3 = Color3.fromRGB(120, 35, 45)
-LeaveMusicBtn.Font = Enum.Font.GothamBold
-LeaveMusicBtn.Text = "LEAVE"
-LeaveMusicBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-LeaveMusicBtn.TextSize = 9
-LeaveMusicBtn.Parent = MusicControlCard
-local LeaveMusicCorner = Instance.new("UICorner")
-LeaveMusicCorner.CornerRadius = UDim.new(0, 6)
-LeaveMusicCorner.Parent = LeaveMusicBtn
-
-local InviteGlobalBtn = Instance.new("TextButton")
-InviteGlobalBtn.Size = UDim2.new(0, 90, 0, 22)
-InviteGlobalBtn.Position = UDim2.new(0, 74, 0, 31)
-InviteGlobalBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 80)
-InviteGlobalBtn.Font = Enum.Font.GothamBold
-InviteGlobalBtn.Text = "INVITE GLOBAL"
-InviteGlobalBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-InviteGlobalBtn.TextSize = 8
-InviteGlobalBtn.Parent = MusicControlCard
-local InviteGlobalCorner = Instance.new("UICorner")
-InviteGlobalCorner.CornerRadius = UDim.new(0, 6)
-InviteGlobalCorner.Parent = InviteGlobalBtn
-
-local InviteServerBtn = Instance.new("TextButton")
-InviteServerBtn.Size = UDim2.new(0, 90, 0, 22)
-InviteServerBtn.Position = UDim2.new(0, 170, 0, 31)
-InviteServerBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 80)
-InviteServerBtn.Font = Enum.Font.GothamBold
-InviteServerBtn.Text = "INVITE SERVER"
-InviteServerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-InviteServerBtn.TextSize = 8
-InviteServerBtn.Parent = MusicControlCard
-local InviteServerCorner = Instance.new("UICorner")
-InviteServerCorner.CornerRadius = UDim.new(0, 6)
-InviteServerCorner.Parent = InviteServerBtn
-
-local MusicQueueLabel = Instance.new("TextLabel")
-MusicQueueLabel.Size = UDim2.new(0, 175, 0, 22)
-MusicQueueLabel.Position = UDim2.new(1, -182, 0, 31)
-MusicQueueLabel.BackgroundTransparency = 1
-MusicQueueLabel.Font = Enum.Font.Gotham
-MusicQueueLabel.Text = "Queue: 0"
-MusicQueueLabel.TextColor3 = Color3.fromRGB(175, 175, 190)
-MusicQueueLabel.TextSize = 8
-MusicQueueLabel.TextXAlignment = Enum.TextXAlignment.Right
-MusicQueueLabel.Parent = MusicControlCard
-
-local MusicSearch = Instance.new("TextBox")
-MusicSearch.Size = UDim2.new(1, 0, 0, 26)
-MusicSearch.Position = UDim2.new(0, 0, 0, 132)
-MusicSearch.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-MusicSearch.BackgroundTransparency = 0.35
-MusicSearch.Font = Enum.Font.GothamMedium
-MusicSearch.PlaceholderText = "Search song name or Music ID..."
-MusicSearch.PlaceholderColor3 = Color3.fromRGB(130, 130, 145)
-MusicSearch.Text = ""
-MusicSearch.TextColor3 = Color3.fromRGB(235, 235, 245)
-MusicSearch.TextSize = 9
-MusicSearch.ClearTextOnFocus = false
-MusicSearch.Parent = MusicFrame
-local MusicSearchCorner = Instance.new("UICorner")
-MusicSearchCorner.CornerRadius = UDim.new(0, 7)
-MusicSearchCorner.Parent = MusicSearch
-
-local MusicList = Instance.new("ScrollingFrame")
-MusicList.Name = "MusicList"
-MusicList.Size = UDim2.new(1, 0, 1, -166)
-MusicList.Position = UDim2.new(0, 0, 0, 164)
-MusicList.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
-MusicList.BackgroundTransparency = 0.35
-MusicList.BorderSizePixel = 0
-MusicList.ScrollBarThickness = 3
-MusicList.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
-MusicList.CanvasSize = UDim2.new(0, 0, 0, 0)
-MusicList.Parent = MusicFrame
-local MusicListCorner = Instance.new("UICorner")
-MusicListCorner.CornerRadius = UDim.new(0, 8)
-MusicListCorner.Parent = MusicList
-
-local MusicListLayout = Instance.new("UIListLayout")
-MusicListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-MusicListLayout.Padding = UDim.new(0, 4)
-MusicListLayout.Parent = MusicList
-local MusicListPadding = Instance.new("UIPadding")
-MusicListPadding.PaddingLeft = UDim.new(0, 5)
-MusicListPadding.PaddingRight = UDim.new(0, 5)
-MusicListPadding.PaddingTop = UDim.new(0, 5)
-MusicListPadding.PaddingBottom = UDim.new(0, 5)
-MusicListPadding.Parent = MusicList
-MusicListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    MusicList.CanvasSize = UDim2.new(0, 0, 0, MusicListLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local function UpdateMusicControls()
-    local host = IsMusicSessionHost()
-    local joined = MusicSessionId ~= nil
-    PlayMusicBtn.Active = host
-    QueueMusicBtn.Active = host
-    PlayMusicBtn.AutoButtonColor = host
-    QueueMusicBtn.AutoButtonColor = host
-    PlayMusicBtn.BackgroundTransparency = host and 0.05 or 0.65
-    QueueMusicBtn.BackgroundTransparency = host and 0.05 or 0.65
-    InviteGlobalBtn.Active = joined
-    InviteServerBtn.Active = joined
-    MusicIdInput.TextEditable = host
-    MusicNameInput.TextEditable = host
-    MusicQueueLabel.Text = "Queue: " .. tostring(MusicSessionData and MusicSessionData.Queue and #MusicSessionData.Queue or 0)
-    MusicMuteBtn.Text = MusicMuted and "UNMUTE" or "MUTE"
-    if host then
-        MusicMuteBtn.BackgroundColor3 = MusicMuted and Color3.fromRGB(140, 80, 35) or Color3.fromRGB(70, 70, 85)
-    else
-        MusicMuteBtn.BackgroundColor3 = MusicMuted and Color3.fromRGB(140, 80, 35) or Color3.fromRGB(70, 70, 85)
-    end
-end
-
-MusicUIRefresh = function()
-    UpdateMusicControls()
-    for _, child in ipairs(MusicList:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
-    end
-    local query = string.lower(MusicSearch.Text or "")
-    local order = 0
-    local categories = {}
-    for category in pairs(MusicDatabase) do table.insert(categories, category) end
-    table.sort(categories, function(a,b) return string.lower(a) < string.lower(b) end)
-    for _, category in ipairs(categories) do
-        local songs = MusicDatabase[category]
-        local header = nil
-        local matchedAny = false
-        for _, song in ipairs(songs) do
-            local hay = string.lower(tostring(song.name) .. " " .. tostring(song.id))
-            if query == "" or string.find(hay, query, 1, true) then
-                if not matchedAny then
-                    order = order + 1
-                    header = Instance.new("TextLabel")
-                    header.Size = UDim2.new(1, 0, 0, 18)
-                    header.BackgroundTransparency = 1
-                    header.Font = Enum.Font.GothamBold
-                    header.Text = "  " .. string.upper(category)
-                    header.TextColor3 = Color3.fromRGB(255, 70, 70)
-                    header.TextSize = 9
-                    header.TextXAlignment = Enum.TextXAlignment.Left
-                    header.LayoutOrder = order
-                    header.Parent = MusicList
-                    matchedAny = true
-                end
-                order = order + 1
-                local row = Instance.new("Frame")
-                row.Size = UDim2.new(1, 0, 0, 28)
-                row.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
-                row.BackgroundTransparency = 0.25
-                row.BorderSizePixel = 0
-                row.LayoutOrder = order
-                row.Parent = MusicList
-                local rc = Instance.new("UICorner")
-                rc.CornerRadius = UDim.new(0, 6)
-                rc.Parent = row
-
-                local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, -145, 1, 0)
-                label.Position = UDim2.new(0, 8, 0, 0)
-                label.BackgroundTransparency = 1
-                label.Font = Enum.Font.GothamMedium
-                label.Text = tostring(song.name) .. "  [" .. tostring(song.id) .. "]"
-                label.TextColor3 = Color3.fromRGB(225, 225, 235)
-                label.TextSize = 8
-                label.TextXAlignment = Enum.TextXAlignment.Left
-                label.TextTruncate = Enum.TextTruncate.AtEnd
-                label.Parent = row
-
-                local play = Instance.new("TextButton")
-                play.Size = UDim2.new(0, 62, 0, 20)
-                play.Position = UDim2.new(1, -130, 0.5, -10)
-                play.BackgroundColor3 = Color3.fromRGB(30, 155, 80)
-                play.Font = Enum.Font.GothamBold
-                play.Text = "PLAY"
-                play.TextColor3 = Color3.fromRGB(255,255,255)
-                play.TextSize = 8
-                play.AutoButtonColor = IsMusicSessionHost()
-                play.BackgroundTransparency = IsMusicSessionHost() and 0.05 or 0.65
-                play.Parent = row
-                local pc = Instance.new("UICorner"); pc.CornerRadius = UDim.new(0,5); pc.Parent = play
-                play.MouseButton1Click:Connect(function()
-                    HostPlaySong(song.name, song.id, false)
-                end)
-
-                local queue = Instance.new("TextButton")
-                queue.Size = UDim2.new(0, 62, 0, 20)
-                queue.Position = UDim2.new(1, -65, 0.5, -10)
-                queue.BackgroundColor3 = Color3.fromRGB(65, 75, 110)
-                queue.Font = Enum.Font.GothamBold
-                queue.Text = "QUEUE"
-                queue.TextColor3 = Color3.fromRGB(255,255,255)
-                queue.TextSize = 8
-                queue.AutoButtonColor = IsMusicSessionHost()
-                queue.BackgroundTransparency = IsMusicSessionHost() and 0.05 or 0.65
-                queue.Parent = row
-                local qc = Instance.new("UICorner"); qc.CornerRadius = UDim.new(0,5); qc.Parent = queue
-                queue.MouseButton1Click:Connect(function()
-                    HostQueueSong(song.name, song.id)
-                end)
-            end
-        end
-    end
-end
-
-CreateSessionBtn.MouseButton1Click:Connect(CreateMusicSession)
-JoinSessionBtn.MouseButton1Click:Connect(function() JoinMusicSession(JoinSessionInput.Text) end)
-JoinSessionInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed then JoinMusicSession(JoinSessionInput.Text) end
-end)
-PlayMusicBtn.MouseButton1Click:Connect(function()
-    HostPlaySong(MusicNameInput.Text, MusicIdInput.Text, false)
-end)
-QueueMusicBtn.MouseButton1Click:Connect(function()
-    HostQueueSong(MusicNameInput.Text, MusicIdInput.Text)
-end)
-MusicMuteBtn.MouseButton1Click:Connect(function()
-    MusicMuted = not MusicMuted
-    local sound = EnsureMusicSound()
-    sound.Volume = MusicMuted and 0 or 0.5
-    UpdateMusicControls()
-end)
-LeaveMusicBtn.MouseButton1Click:Connect(function() LeaveMusicSession(true) end)
-InviteGlobalBtn.MouseButton1Click:Connect(function() InviteMusicSession("GLOBAL") end)
-InviteServerBtn.MouseButton1Click:Connect(function() InviteMusicSession("SERVER") end)
-MusicSearch:GetPropertyChangedSignal("Text"):Connect(function() if MusicUIRefresh then MusicUIRefresh() end end)
-
--- Refresh the listener's local playback whenever the host changes the session state.
-task.spawn(function()
-    while true do
-        if MusicSessionId then
-            local data = HttpRequest(MusicSessionUrl(MusicSessionId), "GET")
-            if type(data) == "table" and data.HostUserId then
-                MusicSessionData = data
-                local stale = tonumber(data.LastHeartbeat or data.CreatedAt or 0) > 0 and (os.time() - tonumber(data.LastHeartbeat or data.CreatedAt)) > MUSIC_SESSION_TTL
-                if stale then
-                    local old = MusicSessionId
-                    MusicSessionId = nil
-                    MusicSessionData = nil
-                    StopMusicPlayback()
-                    if MusicStatus then MusicStatus.Text = "Session " .. old .. " expired." end
-                else
-                    if IsMusicSessionHost() then
-                        if tonumber(data.LastHeartbeat or 0) <= os.time() - MUSIC_HEARTBEAT_INTERVAL then
-                            data.LastHeartbeat = os.time()
-                            MusicSessionData = data
-                            PushMusicSessionState(data)
-                        end
-                    end
-                    local current = data.Current
-                    local nonce = current and current.Nonce
-                    if current and nonce and nonce ~= MusicCurrentNonce then
-                        PlayMusicLocally(current.Id, current.StartedAt, nonce)
-                        if MusicStatus then MusicStatus.Text = "♫ " .. tostring(current.Name or current.Id) .. " [" .. tostring(current.Id) .. "]" end
-                        if not IsMusicSessionHost() and type(ShowLocalSystemMessage) == "function" then
-                            ShowLocalSystemMessage("[Music Session] Host started: " .. tostring(current.Name or current.Id) .. " [" .. tostring(current.Id) .. "]", false)
-                        end
-                    elseif not current and MusicCurrentNonce then
-                        StopMusicPlayback()
-                    end
-                    if MusicUIRefresh then pcall(MusicUIRefresh) end
-                end
-                WriteMusicMemberPresence(true)
-            else
-                local old = MusicSessionId
-                MusicSessionId = nil
-                MusicSessionData = nil
-                StopMusicPlayback()
-                if MusicStatus then MusicStatus.Text = "Session " .. tostring(old) .. " no longer exists." end
-                if MusicUIRefresh then pcall(MusicUIRefresh) end
-            end
-        end
-        task.wait(MUSIC_SESSION_POLL_INTERVAL)
-    end
-end)
-
-local musicSoundForQueue = EnsureMusicSound()
-musicSoundForQueue.Ended:Connect(function()
-    if IsMusicSessionHost() then
-        HostPlayNext()
-    end
-end)
-
-MusicUIRefresh()
-
 -- Input Setup
 local InputBarFrame = Instance.new("Frame")
 InputBarFrame.Name = "InputBarFrame"
@@ -3535,6 +2848,1087 @@ end
 MakeDraggable(MainFrame, HeaderBar)
 MakeDraggable(ToggleButton, ToggleButton)
 
+
+-- ============================================================================
+-- MUSIC SESSION TAB / FIREBASE SHARED LISTENING
+-- This block is completely additive. Existing chat/profile/about logic remains
+-- unchanged; the only integration points are the new tab and SwitchTab below.
+-- ============================================================================
+local MusicFrame = Instance.new("Frame")
+MusicFrame.Name = "MusicSessionFrame"
+MusicFrame.Size = UDim2.new(1, -16, 1, -48)
+MusicFrame.Position = UDim2.new(0, 8, 0, 40)
+MusicFrame.BackgroundTransparency = 1
+MusicFrame.Visible = false
+MusicFrame.Parent = MainFrame
+
+local MusicState = {
+    SessionId = nil,
+    IsHost = false,
+    Muted = false,
+    CurrentTrackSignature = "",
+    CurrentTrack = nil,
+    Polling = false,
+    Catalog = {},
+    Category = "Songs",
+}
+
+local MusicSessionSound = Instance.new("Sound")
+MusicSessionSound.Name = "KronosMusicSessionAudio"
+MusicSessionSound.Looped = false
+MusicSessionSound.Volume = 0.5
+MusicSessionSound.PlayOnRemove = false
+MusicSessionSound.Parent = game:GetService("SoundService")
+
+local function MusicMakeCorner(obj, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 8)
+    c.Parent = obj
+    return c
+end
+
+local function MusicMakeStroke(obj, color, thickness, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color = color or Color3.fromRGB(255, 40, 40)
+    s.Thickness = thickness or 1.2
+    s.Transparency = transparency or 0.35
+    s.Parent = obj
+    return s
+end
+
+local function MusicMakeButton(parent, name, text, size, position)
+    local b = Instance.new("TextButton")
+    b.Name = name
+    b.Size = size
+    b.Position = position
+    b.BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+    b.BackgroundTransparency = 0.18
+    b.BorderSizePixel = 0
+    b.Font = Enum.Font.GothamBold
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(235, 235, 245)
+    b.TextSize = 10
+    b.AutoButtonColor = false
+    b.Parent = parent
+    MusicMakeCorner(b, 7)
+    MusicMakeStroke(b, Color3.fromRGB(255, 45, 45), 1, 0.55)
+    b.MouseEnter:Connect(function()
+        if b.Parent then
+            TweenService:Create(b, TweenInfo.new(0.12), {
+                BackgroundColor3 = Color3.fromRGB(65, 30, 40)
+            }):Play()
+        end
+    end)
+    b.MouseLeave:Connect(function()
+        if b.Parent then
+            TweenService:Create(b, TweenInfo.new(0.12), {
+                BackgroundColor3 = Color3.fromRGB(35, 35, 48)
+            }):Play()
+        end
+    end)
+    return b
+end
+
+local MusicTitle = Instance.new("TextLabel")
+MusicTitle.Name = "MusicTitle"
+MusicTitle.Size = UDim2.new(1, 0, 0, 24)
+MusicTitle.BackgroundTransparency = 1
+MusicTitle.Font = Enum.Font.GothamBold
+MusicTitle.Text = "MUSIC SESSION"
+MusicTitle.TextColor3 = Color3.fromRGB(255, 60, 60)
+MusicTitle.TextSize = 14
+MusicTitle.TextXAlignment = Enum.TextXAlignment.Left
+MusicTitle.Parent = MusicFrame
+
+local MusicStatus = Instance.new("TextLabel")
+MusicStatus.Name = "MusicStatus"
+MusicStatus.Size = UDim2.new(1, 0, 0, 20)
+MusicStatus.Position = UDim2.new(0, 0, 0, 24)
+MusicStatus.BackgroundTransparency = 1
+MusicStatus.Font = Enum.Font.Gotham
+MusicStatus.Text = "Not in a music session."
+MusicStatus.TextColor3 = Color3.fromRGB(170, 170, 185)
+MusicStatus.TextSize = 10
+MusicStatus.TextXAlignment = Enum.TextXAlignment.Left
+MusicStatus.TextTruncate = Enum.TextTruncate.AtEnd
+MusicStatus.Parent = MusicFrame
+
+local MusicBody = Instance.new("Frame")
+MusicBody.Name = "MusicBody"
+MusicBody.Size = UDim2.new(1, 0, 1, -50)
+MusicBody.Position = UDim2.new(0, 0, 0, 48)
+MusicBody.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+MusicBody.BackgroundTransparency = 0.32
+MusicBody.BorderSizePixel = 0
+MusicBody.Parent = MusicFrame
+MusicMakeCorner(MusicBody, 10)
+MusicMakeStroke(MusicBody, Color3.fromRGB(255, 30, 30), 1.5, 0.5)
+
+local MusicNotInSessionFrame = Instance.new("Frame")
+MusicNotInSessionFrame.Name = "MusicNotInSessionFrame"
+MusicNotInSessionFrame.Size = UDim2.new(1, -16, 1, -16)
+MusicNotInSessionFrame.Position = UDim2.new(0, 8, 0, 8)
+MusicNotInSessionFrame.BackgroundTransparency = 1
+MusicNotInSessionFrame.Parent = MusicBody
+
+local CreateMusicSessionButton = MusicMakeButton(
+    MusicNotInSessionFrame,
+    "CreateMusicSessionButton",
+    "CREATE MUSIC SESSION",
+    UDim2.new(1, 0, 0, 34),
+    UDim2.new(0, 0, 0, 0)
+)
+CreateMusicSessionButton.BackgroundColor3 = Color3.fromRGB(190, 30, 35)
+
+local JoinHeader = Instance.new("TextLabel")
+JoinHeader.Size = UDim2.new(1, 0, 0, 20)
+JoinHeader.Position = UDim2.new(0, 0, 0, 48)
+JoinHeader.BackgroundTransparency = 1
+JoinHeader.Font = Enum.Font.GothamBold
+JoinHeader.Text = "JOIN A SESSION"
+JoinHeader.TextColor3 = Color3.fromRGB(235, 235, 245)
+JoinHeader.TextSize = 11
+JoinHeader.TextXAlignment = Enum.TextXAlignment.Left
+JoinHeader.Parent = MusicNotInSessionFrame
+
+local MusicJoinInput = Instance.new("TextBox")
+MusicJoinInput.Name = "MusicJoinInput"
+MusicJoinInput.Size = UDim2.new(1, -88, 0, 30)
+MusicJoinInput.Position = UDim2.new(0, 0, 0, 74)
+MusicJoinInput.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+MusicJoinInput.BackgroundTransparency = 0.15
+MusicJoinInput.BorderSizePixel = 0
+MusicJoinInput.Font = Enum.Font.GothamBold
+MusicJoinInput.PlaceholderText = "6-character Session ID"
+MusicJoinInput.PlaceholderColor3 = Color3.fromRGB(115, 115, 130)
+MusicJoinInput.Text = ""
+MusicJoinInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+MusicJoinInput.TextSize = 11
+MusicJoinInput.ClearTextOnFocus = false
+MusicJoinInput.TextXAlignment = Enum.TextXAlignment.Center
+MusicJoinInput.Parent = MusicNotInSessionFrame
+MusicMakeCorner(MusicJoinInput, 7)
+MusicMakeStroke(MusicJoinInput, Color3.fromRGB(70, 70, 85), 1, 0.4)
+
+local JoinMusicSessionButton = MusicMakeButton(
+    MusicNotInSessionFrame,
+    "JoinMusicSessionButton",
+    "JOIN",
+    UDim2.new(0, 80, 0, 30),
+    UDim2.new(1, -80, 0, 74)
+)
+JoinMusicSessionButton.BackgroundColor3 = Color3.fromRGB(190, 30, 35)
+
+local MusicErrorLabel = Instance.new("TextLabel")
+MusicErrorLabel.Name = "MusicErrorLabel"
+MusicErrorLabel.Size = UDim2.new(1, 0, 0, 34)
+MusicErrorLabel.Position = UDim2.new(0, 0, 0, 112)
+MusicErrorLabel.BackgroundTransparency = 1
+MusicErrorLabel.Font = Enum.Font.Gotham
+MusicErrorLabel.Text = ""
+MusicErrorLabel.TextColor3 = Color3.fromRGB(255, 105, 105)
+MusicErrorLabel.TextSize = 10
+MusicErrorLabel.TextWrapped = true
+MusicErrorLabel.TextXAlignment = Enum.TextXAlignment.Left
+MusicErrorLabel.Parent = MusicNotInSessionFrame
+
+local MusicHostFrame = Instance.new("Frame")
+MusicHostFrame.Name = "MusicHostFrame"
+MusicHostFrame.Size = UDim2.new(1, -16, 1, -16)
+MusicHostFrame.Position = UDim2.new(0, 8, 0, 8)
+MusicHostFrame.BackgroundTransparency = 1
+MusicHostFrame.Visible = false
+MusicHostFrame.Parent = MusicBody
+
+local SessionInfoLabel = Instance.new("TextLabel")
+SessionInfoLabel.Size = UDim2.new(1, -100, 0, 24)
+SessionInfoLabel.BackgroundTransparency = 1
+SessionInfoLabel.Font = Enum.Font.GothamBold
+SessionInfoLabel.Text = "SESSION: ------"
+SessionInfoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SessionInfoLabel.TextSize = 11
+SessionInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+SessionInfoLabel.Parent = MusicHostFrame
+
+local CopySessionButton = MusicMakeButton(
+    MusicHostFrame, "CopySessionButton", "COPY ID",
+    UDim2.new(0, 82, 0, 24), UDim2.new(1, -82, 0, 0)
+)
+
+local HostInviteServerButton = MusicMakeButton(
+    MusicHostFrame, "HostInviteServerButton", "SERVER CHAT",
+    UDim2.new(0, 108, 0, 26), UDim2.new(0, 0, 0, 30)
+)
+local HostInviteGlobalButton = MusicMakeButton(
+    MusicHostFrame, "HostInviteGlobalButton", "GLOBAL CHAT",
+    UDim2.new(0, 108, 0, 26), UDim2.new(0, 114, 0, 30)
+)
+
+local HostNowPlaying = Instance.new("TextLabel")
+HostNowPlaying.Size = UDim2.new(1, -230, 0, 26)
+HostNowPlaying.Position = UDim2.new(0, 230, 0, 30)
+HostNowPlaying.BackgroundTransparency = 1
+HostNowPlaying.Font = Enum.Font.Gotham
+HostNowPlaying.Text = "Now Playing: Nothing"
+HostNowPlaying.TextColor3 = Color3.fromRGB(185, 185, 200)
+HostNowPlaying.TextSize = 9
+HostNowPlaying.TextXAlignment = Enum.TextXAlignment.Right
+HostNowPlaying.TextTruncate = Enum.TextTruncate.AtEnd
+HostNowPlaying.Parent = MusicHostFrame
+
+local CatalogHeader = Instance.new("TextLabel")
+CatalogHeader.Size = UDim2.new(1, 0, 0, 18)
+CatalogHeader.Position = UDim2.new(0, 0, 0, 60)
+CatalogHeader.BackgroundTransparency = 1
+CatalogHeader.Font = Enum.Font.GothamBold
+CatalogHeader.Text = "TRACK LIBRARY"
+CatalogHeader.TextColor3 = Color3.fromRGB(255, 60, 60)
+CatalogHeader.TextSize = 10
+CatalogHeader.TextXAlignment = Enum.TextXAlignment.Left
+CatalogHeader.Parent = MusicHostFrame
+
+local MusicSearchInput = Instance.new("TextBox")
+MusicSearchInput.Name = "MusicSearchInput"
+MusicSearchInput.Size = UDim2.new(1, 0, 0, 25)
+MusicSearchInput.Position = UDim2.new(0, 0, 0, 80)
+MusicSearchInput.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+MusicSearchInput.BackgroundTransparency = 0.18
+MusicSearchInput.BorderSizePixel = 0
+MusicSearchInput.Font = Enum.Font.Gotham
+MusicSearchInput.PlaceholderText = "Search songs..."
+MusicSearchInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 135)
+MusicSearchInput.Text = ""
+MusicSearchInput.TextColor3 = Color3.fromRGB(245, 245, 250)
+MusicSearchInput.TextSize = 10
+MusicSearchInput.ClearTextOnFocus = false
+MusicSearchInput.Parent = MusicHostFrame
+MusicMakeCorner(MusicSearchInput, 6)
+
+local CategoryScroll = Instance.new("ScrollingFrame")
+CategoryScroll.Name = "MusicCategoryScroll"
+CategoryScroll.Size = UDim2.new(1, 0, 0, 28)
+CategoryScroll.Position = UDim2.new(0, 0, 0, 110)
+CategoryScroll.BackgroundTransparency = 1
+CategoryScroll.BorderSizePixel = 0
+CategoryScroll.ScrollBarThickness = 0
+CategoryScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+CategoryScroll.Parent = MusicHostFrame
+
+local CategoryLayout = Instance.new("UIListLayout")
+CategoryLayout.FillDirection = Enum.FillDirection.Horizontal
+CategoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CategoryLayout.Padding = UDim.new(0, 5)
+CategoryLayout.Parent = CategoryScroll
+
+local TrackScroll = Instance.new("ScrollingFrame")
+TrackScroll.Name = "MusicTrackScroll"
+TrackScroll.Size = UDim2.new(1, 0, 1, -142)
+TrackScroll.Position = UDim2.new(0, 0, 0, 142)
+TrackScroll.BackgroundTransparency = 1
+TrackScroll.BorderSizePixel = 0
+TrackScroll.ScrollBarThickness = 3
+TrackScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
+TrackScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+TrackScroll.Parent = MusicHostFrame
+
+local TrackLayout = Instance.new("UIListLayout")
+TrackLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TrackLayout.Padding = UDim.new(0, 4)
+TrackLayout.Parent = TrackScroll
+
+TrackLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    TrackScroll.CanvasSize = UDim2.new(0, 0, 0, TrackLayout.AbsoluteContentSize.Y + 8)
+end)
+
+CategoryLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    CategoryScroll.CanvasSize = UDim2.new(0, CategoryLayout.AbsoluteContentSize.X + 8, 0, 0)
+end)
+
+local MusicParticipantFrame = Instance.new("Frame")
+MusicParticipantFrame.Name = "MusicParticipantFrame"
+MusicParticipantFrame.Size = UDim2.new(1, -16, 1, -16)
+MusicParticipantFrame.Position = UDim2.new(0, 8, 0, 8)
+MusicParticipantFrame.BackgroundTransparency = 1
+MusicParticipantFrame.Visible = false
+MusicParticipantFrame.Parent = MusicBody
+
+local ParticipantSessionLabel = Instance.new("TextLabel")
+ParticipantSessionLabel.Size = UDim2.new(1, 0, 0, 25)
+ParticipantSessionLabel.BackgroundTransparency = 1
+ParticipantSessionLabel.Font = Enum.Font.GothamBold
+ParticipantSessionLabel.Text = "SESSION: ------"
+ParticipantSessionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ParticipantSessionLabel.TextSize = 11
+ParticipantSessionLabel.TextXAlignment = Enum.TextXAlignment.Left
+ParticipantSessionLabel.Parent = MusicParticipantFrame
+
+local ParticipantHostLabel = Instance.new("TextLabel")
+ParticipantHostLabel.Size = UDim2.new(1, 0, 0, 20)
+ParticipantHostLabel.Position = UDim2.new(0, 0, 0, 28)
+ParticipantHostLabel.BackgroundTransparency = 1
+ParticipantHostLabel.Font = Enum.Font.Gotham
+ParticipantHostLabel.Text = "Host: Unknown"
+ParticipantHostLabel.TextColor3 = Color3.fromRGB(165, 165, 180)
+ParticipantHostLabel.TextSize = 10
+ParticipantHostLabel.TextXAlignment = Enum.TextXAlignment.Left
+ParticipantHostLabel.Parent = MusicParticipantFrame
+
+local ParticipantNowPlaying = Instance.new("TextLabel")
+ParticipantNowPlaying.Size = UDim2.new(1, 0, 0, 55)
+ParticipantNowPlaying.Position = UDim2.new(0, 0, 0, 55)
+ParticipantNowPlaying.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+ParticipantNowPlaying.BackgroundTransparency = 0.18
+ParticipantNowPlaying.BorderSizePixel = 0
+ParticipantNowPlaying.Font = Enum.Font.GothamBold
+ParticipantNowPlaying.Text = "Now Playing: Nothing"
+ParticipantNowPlaying.TextColor3 = Color3.fromRGB(245, 245, 250)
+ParticipantNowPlaying.TextSize = 12
+ParticipantNowPlaying.TextWrapped = true
+ParticipantNowPlaying.Parent = MusicParticipantFrame
+MusicMakeCorner(ParticipantNowPlaying, 8)
+MusicMakeStroke(ParticipantNowPlaying, Color3.fromRGB(255, 45, 45), 1.2, 0.45)
+
+local ParticipantMuteButton = MusicMakeButton(
+    MusicParticipantFrame, "ParticipantMuteButton", "MUTE",
+    UDim2.new(0, 100, 0, 32), UDim2.new(0, 0, 0, 120)
+)
+local ParticipantLeaveButton = MusicMakeButton(
+    MusicParticipantFrame, "ParticipantLeaveButton", "LEAVE SESSION",
+    UDim2.new(0, 125, 0, 32), UDim2.new(0, 108, 0, 120)
+)
+ParticipantLeaveButton.BackgroundColor3 = Color3.fromRGB(170, 30, 35)
+
+local ParticipantInfoLabel = Instance.new("TextLabel")
+ParticipantInfoLabel.Size = UDim2.new(1, 0, 0, 60)
+ParticipantInfoLabel.Position = UDim2.new(0, 0, 0, 164)
+ParticipantInfoLabel.BackgroundTransparency = 1
+ParticipantInfoLabel.Font = Enum.Font.Gotham
+ParticipantInfoLabel.Text = "Shared playback is controlled by the host."
+ParticipantInfoLabel.TextColor3 = Color3.fromRGB(135, 135, 150)
+ParticipantInfoLabel.TextSize = 9
+ParticipantInfoLabel.TextWrapped = true
+ParticipantInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+ParticipantInfoLabel.TextYAlignment = Enum.TextYAlignment.Top
+ParticipantInfoLabel.Parent = MusicParticipantFrame
+
+local function MusicSetStatus(text, isError)
+    MusicStatus.Text = tostring(text or "")
+    MusicStatus.TextColor3 = isError and Color3.fromRGB(255, 105, 105) or Color3.fromRGB(170, 170, 185)
+end
+
+local function MusicSetError(text)
+    MusicErrorLabel.Text = tostring(text or "")
+    MusicErrorLabel.TextColor3 = Color3.fromRGB(255, 105, 105)
+end
+
+local function MusicStopLocalPlayback()
+    pcall(function()
+        MusicSessionSound:Stop()
+        MusicSessionSound.TimePosition = 0
+    end)
+    MusicState.CurrentTrack = nil
+    MusicState.CurrentTrackSignature = ""
+end
+
+local function MusicRequest(url, method, body)
+    local encodedBody = nil
+    if body ~= nil then
+        local ok, encoded = pcall(function()
+            return HttpService:JSONEncode(body)
+        end)
+        if not ok then return nil end
+        encodedBody = encoded
+    end
+
+    -- Reuse the script's existing multi-executor request handler first.
+    local response = nil
+    if http_req then
+        local ok, result = pcall(function()
+            return http_req({
+                Url = url,
+                Method = method or "GET",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = encodedBody,
+            })
+        end)
+        if ok and result then response = result end
+    end
+
+    -- Standard Roblox HttpService fallback when HTTP requests are permitted.
+    if not response then
+        local ok, result = pcall(function()
+            return HttpService:RequestAsync({
+                Url = url,
+                Method = method or "GET",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = encodedBody,
+            })
+        end)
+        if ok and result then response = result end
+    end
+
+    if not response then return nil end
+    local rawBody = response.Body
+    if rawBody == nil or rawBody == "" then return true end
+
+    local decodeOk, decoded = pcall(function()
+        return HttpService:JSONDecode(rawBody)
+    end)
+    if decodeOk then return decoded end
+    return true
+end
+
+local function MusicSessionURL(sessionId, suffix)
+    return MUSIC_SESSION_ROOT .. tostring(sessionId) .. (suffix or "") .. ".json"
+end
+
+local function MusicGenerateSessionId()
+    local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local result = {}
+    for i = 1, 6 do
+        local n = math.random(1, #alphabet)
+        result[i] = string.sub(alphabet, n, n)
+    end
+    return table.concat(result)
+end
+
+local function MusicGetSession(sessionId)
+    if not sessionId or sessionId == "" then return nil end
+    return MusicRequest(MusicSessionURL(sessionId), "GET")
+end
+
+local function MusicNormalizeCatalog(data)
+    local normalized = {}
+    if type(data) ~= "table" then return normalized end
+
+    for category, songs in pairs(data) do
+        if type(songs) == "table" then
+            normalized[tostring(category)] = {}
+            for _, song in pairs(songs) do
+                if type(song) == "table" then
+                    local name = song.name or song.Name or song.title or song.Title
+                    local id = song.id or song.ID or song.Id or song.assetId or song.AssetId
+                    if name and id then
+                        table.insert(normalized[tostring(category)], {
+                            name = tostring(name),
+                            id = tostring(id),
+                        })
+                    end
+                end
+            end
+        end
+    end
+    return normalized
+end
+
+local function MusicPublishTrack(song)
+    if not MusicState.SessionId or not MusicState.IsHost then return nil end
+
+    local pendingTrack = {
+        name = tostring(song.name),
+        id = tostring(song.id),
+        timestamp = {[".sv"] = "timestamp"},
+    }
+
+    local wrote = MusicRequest(
+        MusicSessionURL(MusicState.SessionId, "/currentTrack"),
+        "PUT",
+        pendingTrack
+    )
+
+    if wrote == nil then return nil end
+
+    -- Firebase resolves {".sv":"timestamp"} to its own server clock.
+    local resolved = MusicRequest(
+        MusicSessionURL(MusicState.SessionId, "/currentTrack"),
+        "GET"
+    )
+
+    if type(resolved) == "table" and resolved.id and tonumber(resolved.timestamp) then
+        return {
+            name = tostring(resolved.name or song.name),
+            id = tostring(resolved.id),
+            timestamp = tonumber(resolved.timestamp),
+        }
+    end
+
+    -- Graceful fallback if the database cannot immediately return the
+    -- resolved server timestamp.
+    return {
+        name = tostring(song.name),
+        id = tostring(song.id),
+        timestamp = os.time(),
+    }
+end
+
+local function MusicRenderTrackList()
+    for _, child in ipairs(TrackScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    local songs = MusicState.Catalog[MusicState.Category] or {}
+    local query = string.lower(MusicSearchInput.Text or "")
+
+    for index, song in ipairs(songs) do
+        if query == "" or string.find(string.lower(song.name), query, 1, true) then
+            local trackButton = MusicMakeButton(
+                TrackScroll,
+                "Track_" .. tostring(song.id) .. "_" .. tostring(index),
+                "  " .. song.name,
+                UDim2.new(1, -4, 0, 28),
+                UDim2.new()
+            )
+            trackButton.TextXAlignment = Enum.TextXAlignment.Left
+            trackButton.LayoutOrder = index
+            trackButton.MouseButton1Click:Connect(function()
+                if not MusicState.IsHost or not MusicState.SessionId then
+                    MusicSetError("Only the host can change tracks.")
+                    return
+                end
+
+                local track = MusicPublishTrack(song)
+                if not track then
+                    MusicSetError("Failed to update Firebase. Track was not shared.")
+                    return
+                end
+
+                MusicState.CurrentTrack = track
+                MusicState.CurrentTrackSignature =
+                    tostring(track.id) .. "|" .. tostring(track.timestamp)
+
+                local soundId = tostring(track.id)
+                if not string.find(soundId, "rbxassetid://", 1, true) then
+                    soundId = "rbxassetid://" .. soundId
+                end
+
+                pcall(function()
+                    MusicSessionSound:Stop()
+                    MusicSessionSound.SoundId = soundId
+                    MusicSessionSound.Volume = MusicState.Muted and 0 or 0.5
+                    MusicSessionSound.TimePosition = 0
+                    MusicSessionSound:Play()
+                end)
+
+                HostNowPlaying.Text = "Now Playing: " .. track.name
+                MusicSetStatus("Hosting • Now Playing: " .. track.name)
+                MusicSetError("")
+            end)
+        end
+    end
+end
+
+local function MusicLoadCatalog()
+    local loaded = nil
+    task.spawn(function()
+        local ok, result = pcall(function()
+            local raw
+            if http_req then
+                local response = http_req({
+                    Url = MUSIC_SESSION_CATALOG_URL,
+                    Method = "GET",
+                    Headers = {["Content-Type"] = "application/json"},
+                })
+                raw = response and response.Body
+            end
+
+            if not raw then
+                raw = HttpService:GetAsync(MUSIC_SESSION_CATALOG_URL)
+            end
+
+            return HttpService:JSONDecode(raw)
+        end)
+        if ok then loaded = MusicNormalizeCatalog(result) end
+
+        if loaded and next(loaded) then
+            MusicState.Catalog = loaded
+        else
+            MusicState.Catalog = MusicNormalizeCatalog(MUSIC_SESSION_FALLBACK_CATALOG)
+        end
+
+        -- The UI is already created; rebuild it on the main task.
+        task.defer(function()
+            if MusicFrame and MusicFrame.Parent then
+                -- category buttons
+                for _, child in ipairs(CategoryScroll:GetChildren()) do
+                    if child:IsA("TextButton") then child:Destroy() end
+                end
+
+                local categories = {"Songs", "Hindi", "Bhojpuri", "Phonk", "MultiLang", "Sounds"}
+                for index, category in ipairs(categories) do
+                    local button = MusicMakeButton(
+                        CategoryScroll,
+                        "Category_" .. category,
+                        category,
+                        UDim2.new(0, math.max(58, (#category * 6) + 24), 0, 25),
+                        UDim2.new()
+                    )
+                    button.LayoutOrder = index
+                    button.MouseButton1Click:Connect(function()
+                        MusicState.Category = category
+                        MusicSearchInput.Text = ""
+                        for _, obj in ipairs(CategoryScroll:GetChildren()) do
+                            if obj:IsA("TextButton") then
+                                obj.BackgroundColor3 = (obj == button)
+                                    and Color3.fromRGB(185, 30, 35)
+                                    or Color3.fromRGB(35, 35, 48)
+                            end
+                        end
+                        -- Render below.
+                        task.defer(function()
+                            for _, trackButton in ipairs(TrackScroll:GetChildren()) do
+                                if trackButton:IsA("TextButton") then trackButton:Destroy() end
+                            end
+                            local songs = MusicState.Catalog[MusicState.Category] or {}
+                            local query = string.lower(MusicSearchInput.Text or "")
+                            for _, song in ipairs(songs) do
+                                if query == "" or string.find(string.lower(song.name), query, 1, true) then
+                                    local trackButton = MusicMakeButton(
+                                        TrackScroll,
+                                        "Track_" .. tostring(song.id),
+                                        song.name,
+                                        UDim2.new(1, -4, 0, 28),
+                                        UDim2.new()
+                                    )
+                                    trackButton.TextXAlignment = Enum.TextXAlignment.Left
+                                    trackButton.Text = "  " .. song.name
+                                    trackButton.LayoutOrder = #TrackScroll:GetChildren()
+                                    trackButton.MouseButton1Click:Connect(function()
+                                        if not MusicState.IsHost or not MusicState.SessionId then
+                                            MusicSetError("Only the host can change tracks.")
+                                            return
+                                        end
+
+                                        local track = MusicPublishTrack(song)
+                                        if not track then
+                                            MusicSetError("Failed to update Firebase. Track was not shared.")
+                                            return
+                                        end
+
+                                        MusicState.CurrentTrack = track
+                                        MusicState.CurrentTrackSignature =
+                                            tostring(track.id) .. "|" .. tostring(track.timestamp)
+
+                                        local soundId = tostring(track.id)
+                                        if not string.find(soundId, "rbxassetid://", 1, true) then
+                                            soundId = "rbxassetid://" .. soundId
+                                        end
+
+                                        pcall(function()
+                                            MusicSessionSound:Stop()
+                                            MusicSessionSound.SoundId = soundId
+                                            MusicSessionSound.Volume = MusicState.Muted and 0 or 0.5
+                                            MusicSessionSound.TimePosition = 0
+                                            MusicSessionSound:Play()
+                                        end)
+
+                                        HostNowPlaying.Text = "Now Playing: " .. track.name
+                                        MusicSetStatus("Hosting • Now Playing: " .. track.name)
+                                        MusicSetError("")
+                                    end)
+                                end
+                            end
+                        end)
+                    end)
+                end
+
+                local defaultButton = CategoryScroll:FindFirstChild("Category_Songs")
+                if defaultButton then
+                    defaultButton.BackgroundColor3 = Color3.fromRGB(185, 30, 35)
+                end
+                MusicRenderTrackList()
+            end
+        end)
+    end)
+end
+
+local function MusicShowLocalTrackMessage(songName)
+    local text = "[Music Session] Now playing: " .. tostring(songName or "Unknown")
+    -- Reuse the existing local system-message renderer so the message is
+    -- completely client-local and never written to either chat database.
+    pcall(function()
+        ShowLocalSystemMessage(text, false)
+    end)
+end
+
+
+local function MusicApplyTrack(track, announce)
+    if type(track) ~= "table" then return end
+
+    local id = track.id or track.ID or track.Id
+    local name = track.name or track.Name or "Unknown"
+    local timestamp = tonumber(track.timestamp or track.Timestamp or os.time()) or os.time()
+    if not id then return end
+
+    id = tostring(id)
+    local signature = id .. "|" .. tostring(timestamp)
+
+    if MusicState.CurrentTrackSignature == signature then
+        -- Keep a locally running track aligned to the shared timestamp.
+        if not MusicState.IsHost and MusicSessionSound.IsPlaying then
+            local elapsed = math.max(0, os.time() - timestamp)
+            if elapsed >= 0 then
+                pcall(function()
+                    if MusicSessionSound.TimeLength > 0
+                        and elapsed < MusicSessionSound.TimeLength then
+                        if math.abs(MusicSessionSound.TimePosition - elapsed) > 2 then
+                            MusicSessionSound.TimePosition = elapsed
+                        end
+                    end
+                end)
+            end
+        end
+        return
+    end
+
+    MusicState.CurrentTrackSignature = signature
+    MusicState.CurrentTrack = {
+        id = id,
+        name = tostring(name),
+        timestamp = timestamp,
+    }
+
+    local soundId = id
+    if not string.find(soundId, "rbxassetid://", 1, true) then
+        soundId = "rbxassetid://" .. soundId
+    end
+
+    pcall(function()
+        MusicSessionSound:Stop()
+        MusicSessionSound.SoundId = soundId
+        MusicSessionSound.Volume = MusicState.Muted and 0 or 0.5
+        MusicSessionSound.TimePosition = 0
+        MusicSessionSound:Play()
+    end)
+
+    local elapsed = math.max(0, os.time() - timestamp)
+    task.spawn(function()
+        for _ = 1, 30 do
+            if not MusicSessionSound.Parent or MusicState.CurrentTrackSignature ~= signature then
+                return
+            end
+            if MusicSessionSound.IsLoaded or MusicSessionSound.TimeLength > 0 then
+                if MusicSessionSound.TimeLength > 0 and elapsed < MusicSessionSound.TimeLength then
+                    pcall(function()
+                        MusicSessionSound.TimePosition = elapsed
+                    end)
+                end
+                break
+            end
+            task.wait(0.1)
+        end
+    end)
+
+    if MusicState.IsHost then
+        HostNowPlaying.Text = "Now Playing: " .. tostring(name)
+    else
+        ParticipantNowPlaying.Text = "Now Playing: " .. tostring(name)
+        MusicSetStatus("Joined • Now Playing: " .. tostring(name))
+        if announce then
+            MusicShowLocalTrackMessage(name)
+        end
+    end
+end
+
+local function MusicResolveHostName(hostUserId)
+    local numericId = tonumber(hostUserId)
+    if not numericId then return tostring(hostUserId or "Unknown") end
+
+    local player = Players:GetPlayerByUserId(numericId)
+    if player then
+        return player.DisplayName or player.Name
+    end
+
+    local ok, name = pcall(function()
+        return Players:GetNameFromUserIdAsync(numericId)
+    end)
+    if ok and name then return tostring(name) end
+    return "User " .. tostring(numericId)
+end
+
+local function MusicDisconnectPolling()
+    MusicState.Polling = false
+end
+
+local function MusicLeaveSession(showMessage)
+    local sessionId = MusicState.SessionId
+    local wasHost = MusicState.IsHost
+
+    MusicDisconnectPolling()
+    MusicStopLocalPlayback()
+
+    if sessionId then
+        task.spawn(function()
+            if wasHost then
+                MusicRequest(MusicSessionURL(sessionId), "DELETE")
+            else
+                MusicRequest(MusicSessionURL(sessionId, "/members/" .. tostring(LocalPlayer.UserId)), "DELETE")
+            end
+        end)
+    end
+
+    MusicState.SessionId = nil
+    MusicState.IsHost = false
+    MusicState.CurrentTrack = nil
+    MusicState.CurrentTrackSignature = ""
+    MusicState.Muted = false
+
+    SessionInfoLabel.Text = "SESSION: ------"
+    ParticipantSessionLabel.Text = "SESSION: ------"
+    ParticipantHostLabel.Text = "Host: Unknown"
+    ParticipantNowPlaying.Text = "Now Playing: Nothing"
+    HostNowPlaying.Text = "Now Playing: Nothing"
+    ParticipantMuteButton.Text = "MUTE"
+    MusicHostFrame.Visible = false
+    MusicParticipantFrame.Visible = false
+    MusicNotInSessionFrame.Visible = true
+    MusicSetStatus("Not in a music session.")
+    MusicSetError("")
+
+    if showMessage then
+        MusicSetStatus("You left the music session.")
+    end
+end
+
+local function MusicStartPolling(sessionId, isHost)
+    MusicDisconnectPolling()
+    MusicState.Polling = true
+
+    task.spawn(function()
+        while MusicState.Polling and MusicState.SessionId == sessionId do
+            local session = MusicGetSession(sessionId)
+
+            if type(session) ~= "table" then
+                if MusicState.SessionId == sessionId then
+                    MusicState.Polling = false
+                    MusicStopLocalPlayback()
+                    MusicState.SessionId = nil
+                    MusicState.IsHost = false
+                    MusicHostFrame.Visible = false
+                    MusicParticipantFrame.Visible = false
+                    MusicNotInSessionFrame.Visible = true
+                    MusicSetStatus("The music session has ended.")
+                    MusicSetError("")
+                end
+                break
+            end
+
+            local hostId = tostring(session.hostUserId or "")
+            local currentTrack = session.currentTrack
+
+            if isHost then
+                MusicSetStatus(
+                    currentTrack and currentTrack.name
+                        and ("Hosting • Now Playing: " .. tostring(currentTrack.name))
+                        or "Hosting • Waiting for a track..."
+                )
+            else
+                ParticipantHostLabel.Text = "Host: " .. MusicResolveHostName(hostId)
+            end
+
+            if type(currentTrack) == "table" then
+                MusicApplyTrack(currentTrack, not isHost)
+            end
+
+            task.wait(1)
+        end
+    end)
+end
+
+local function MusicCreateSession()
+    if MusicState.SessionId then
+        MusicSetError("You are already in a music session.")
+        return
+    end
+
+    CreateMusicSessionButton.Text = "CREATING..."
+    MusicSetError("")
+
+    task.spawn(function()
+        local createdId = nil
+
+        for _ = 1, 8 do
+            local candidate = MusicGenerateSessionId()
+            local existing = MusicGetSession(candidate)
+            if existing == nil then
+                local payload = {
+                    hostUserId = tostring(LocalPlayer.UserId),
+                    currentTrack = nil,
+                    members = {
+                        [tostring(LocalPlayer.UserId)] = true,
+                    },
+                }
+
+                local result = MusicRequest(MusicSessionURL(candidate), "PUT", payload)
+                if result ~= nil then
+                    createdId = candidate
+                    break
+                end
+            end
+        end
+
+        if not createdId then
+            CreateMusicSessionButton.Text = "CREATE MUSIC SESSION"
+            MusicSetError("Unable to create a session. Check HTTP/Firebase access.")
+            return
+        end
+
+        MusicState.SessionId = createdId
+        MusicState.IsHost = true
+        MusicState.CurrentTrack = nil
+        MusicState.CurrentTrackSignature = ""
+
+        SessionInfoLabel.Text = "SESSION: " .. createdId
+        MusicHostFrame.Visible = true
+        MusicParticipantFrame.Visible = false
+        MusicNotInSessionFrame.Visible = false
+        CreateMusicSessionButton.Text = "CREATE MUSIC SESSION"
+        MusicSetStatus("Hosting • Session " .. createdId)
+        MusicSetError("")
+
+        MusicStartPolling(createdId, true)
+    end)
+end
+
+local function MusicJoinSession()
+    if MusicState.SessionId then
+        MusicSetError("You are already in a music session.")
+        return
+    end
+
+    local sessionId = string.upper((MusicJoinInput.Text or ""):gsub("%s+", ""))
+    if #sessionId ~= 6 or not sessionId:match("^[A-Z0-9]+$") then
+        MusicSetError("Invalid Session ID. Enter the 6-character code.")
+        return
+    end
+
+    JoinMusicSessionButton.Text = "CHECKING..."
+    MusicSetError("")
+
+    task.spawn(function()
+        local session = MusicGetSession(sessionId)
+
+        if type(session) ~= "table" or not session.hostUserId then
+            JoinMusicSessionButton.Text = "JOIN"
+            MusicSetError("Invalid Session ID.")
+            return
+        end
+
+        local memberUrl = MusicSessionURL(sessionId, "/members/" .. tostring(LocalPlayer.UserId))
+        local added = MusicRequest(memberUrl, "PUT", true)
+
+        if added == nil then
+            JoinMusicSessionButton.Text = "JOIN"
+            MusicSetError("Could not join the session. Check Firebase access.")
+            return
+        end
+
+        MusicState.SessionId = sessionId
+        MusicState.IsHost = false
+        MusicState.CurrentTrack = nil
+        MusicState.CurrentTrackSignature = ""
+
+        ParticipantSessionLabel.Text = "SESSION: " .. sessionId
+        ParticipantHostLabel.Text = "Host: " .. MusicResolveHostName(session.hostUserId)
+        ParticipantNowPlaying.Text = "Now Playing: Nothing"
+
+        MusicNotInSessionFrame.Visible = false
+        MusicHostFrame.Visible = false
+        MusicParticipantFrame.Visible = true
+        JoinMusicSessionButton.Text = "JOIN"
+        MusicSetStatus("Joined • Waiting for the host...")
+        MusicSetError("")
+
+        if type(session.currentTrack) == "table" then
+            MusicApplyTrack(session.currentTrack, true)
+        end
+
+        MusicStartPolling(sessionId, false)
+    end)
+end
+
+local function MusicSendInvite(scope)
+    if not MusicState.SessionId or not MusicState.IsHost then
+        MusicSetError("Only the host can send a session invite.")
+        return
+    end
+
+    local payload = {
+        ClientMessageId = LocalPlayer.UserId .. "_musicinvite_" ..
+            tostring(math.floor(os.clock() * 1000000)) .. "_" ..
+            tostring(math.random(100000, 999999)),
+        Username = LocalPlayer.Name,
+        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        Text = "[Music Session] Join my session using ID: " .. MusicState.SessionId,
+        Timestamp = os.time(),
+        Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
+        PfpId = CurrentPfpId,
+        IsPrivate = false,
+        MusicSessionInvite = true,
+        MusicSessionId = MusicState.SessionId,
+    }
+
+    local endpoint = (scope == "GLOBAL") and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
+    task.spawn(function()
+        local result = MusicRequest(endpoint, "POST", payload)
+        if result ~= nil then
+            MusicSetStatus("Invite sent to " .. string.lower(scope) .. " chat.")
+        else
+            MusicSetError("Failed to send invite to " .. string.lower(scope) .. " chat.")
+        end
+    end)
+end
+
+CreateMusicSessionButton.MouseButton1Click:Connect(MusicCreateSession)
+JoinMusicSessionButton.MouseButton1Click:Connect(MusicJoinSession)
+
+MusicJoinInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local cleaned = string.upper((MusicJoinInput.Text or ""):gsub("%s+", ""))
+    if #cleaned > 6 then cleaned = string.sub(cleaned, 1, 6) end
+    if MusicJoinInput.Text ~= cleaned then
+        MusicJoinInput.Text = cleaned
+    end
+end)
+
+MusicSearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    if MusicState.IsHost then
+        MusicRenderTrackList()
+    end
+end)
+
+CopySessionButton.MouseButton1Click:Connect(function()
+    if MusicState.SessionId and setclipboard then
+        pcall(function() setclipboard(tostring(MusicState.SessionId)) end)
+        MusicSetStatus("Session ID copied: " .. tostring(MusicState.SessionId))
+    elseif MusicState.SessionId then
+        MusicSetStatus("Session ID: " .. tostring(MusicState.SessionId))
+    end
+end)
+
+HostInviteServerButton.MouseButton1Click:Connect(function()
+    MusicSendInvite("SERVER")
+end)
+
+HostInviteGlobalButton.MouseButton1Click:Connect(function()
+    MusicSendInvite("GLOBAL")
+end)
+
+ParticipantMuteButton.MouseButton1Click:Connect(function()
+    MusicState.Muted = not MusicState.Muted
+    MusicSessionSound.Volume = MusicState.Muted and 0 or 0.5
+    ParticipantMuteButton.Text = MusicState.Muted and "UNMUTE" or "MUTE"
+    MusicSetStatus(MusicState.Muted and "Joined • Local audio muted." or "Joined • Local audio unmuted.")
+end)
+
+ParticipantLeaveButton.MouseButton1Click:Connect(function()
+    MusicLeaveSession(true)
+end)
+
+MusicLoadCatalog()
+
+-- ============================================================================
+-- END MUSIC SESSION ADDON
+-- ============================================================================
+
 -- ============================================================================
 -- TAB SWITCHING ROUTINE
 -- ============================================================================
@@ -3544,7 +3938,7 @@ function SwitchTab(newTab)
     InputBarFrame.Visible = (newTab == "GLOBAL" or newTab == "SERVER")
     AboutFrame.Visible = (newTab == "ABOUT")
     ProfileFrame.Visible = (newTab == "PROFILE")
-    MusicFrame.Visible = (newTab == "MUSIC")
+    MusicFrame.Visible = (newTab == "MUSIC_SESSION")
     StickerPanel.Visible = false
     ServerInviteButton.Visible = (newTab == "GLOBAL")
 
@@ -3552,7 +3946,7 @@ function SwitchTab(newTab)
     ServerTabBtn.BackgroundColor3 = (newTab == "SERVER") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
     ProfileTabBtn.BackgroundColor3 = (newTab == "PROFILE") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
     AboutTabBtn.BackgroundColor3 = (newTab == "ABOUT") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
-    MusicTabBtn.BackgroundColor3 = (newTab == "MUSIC") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
+    MusicSessionTabBtn.BackgroundColor3 = (newTab == "MUSIC_SESSION") and Color3.fromRGB(200, 30, 30) or Color3.fromRGB(40, 40, 55)
 
     if newTab == "GLOBAL" then
         for _, elem in pairs(ServerUIElements) do elem.Visible = false end
@@ -3567,7 +3961,7 @@ GlobalTabBtn.MouseButton1Click:Connect(function() SwitchTab("GLOBAL") end)
 ServerTabBtn.MouseButton1Click:Connect(function() SwitchTab("SERVER") end)
 ProfileTabBtn.MouseButton1Click:Connect(function() SwitchTab("PROFILE") end)
 AboutTabBtn.MouseButton1Click:Connect(function() SwitchTab("ABOUT") end)
-MusicTabBtn.MouseButton1Click:Connect(function() SwitchTab("MUSIC") end)
+MusicSessionTabBtn.MouseButton1Click:Connect(function() SwitchTab("MUSIC_SESSION") end)
 
 -- Initial state: GLOBAL is the default tab.
 ServerInviteButton.Visible = true
@@ -3767,45 +4161,6 @@ CreateMessageCard = function(msgData, isGlobal)
             end
         end)
 
-        local pad = Instance.new("UIPadding")
-        pad.PaddingBottom = UDim.new(0, 8)
-        pad.Parent = frame
-    elseif msgData.IsMusicInvite and msgData.MusicSessionId then
-        local musicInviteButton = Instance.new("TextButton")
-        musicInviteButton.Name = "MusicInviteCardButton"
-        musicInviteButton.Size = UDim2.new(1, -48, 0, 34)
-        musicInviteButton.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 58 or 24)
-        musicInviteButton.BackgroundColor3 = Color3.fromRGB(120, 35, 155)
-        musicInviteButton.BackgroundTransparency = 0.12
-        musicInviteButton.BorderSizePixel = 0
-        musicInviteButton.Font = Enum.Font.GothamBold
-        musicInviteButton.Text = "  ♫  JOIN MUSIC SESSION  #" .. tostring(msgData.MusicSessionId) .. "  "
-        musicInviteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        musicInviteButton.TextSize = 10
-        musicInviteButton.ZIndex = 12
-        musicInviteButton.Parent = frame
-        local musicInviteCorner = Instance.new("UICorner")
-        musicInviteCorner.CornerRadius = UDim.new(0, 7)
-        musicInviteCorner.Parent = musicInviteButton
-
-        local musicInviteInfo = Instance.new("TextLabel")
-        musicInviteInfo.Name = "MusicInviteInfo"
-        musicInviteInfo.Size = UDim2.new(1, -48, 0, 18)
-        musicInviteInfo.Position = UDim2.new(0, 38, 0, msgData.ReplyToText and 94 or 60)
-        musicInviteInfo.BackgroundTransparency = 1
-        musicInviteInfo.Font = Enum.Font.Gotham
-        musicInviteInfo.Text = tostring(msgData.Text or ("Join Music Session #" .. tostring(msgData.MusicSessionId)))
-        musicInviteInfo.TextColor3 = Color3.fromRGB(215, 205, 225)
-        musicInviteInfo.TextSize = 9
-        musicInviteInfo.TextXAlignment = Enum.TextXAlignment.Left
-        musicInviteInfo.TextYAlignment = Enum.TextYAlignment.Center
-        musicInviteInfo.TextWrapped = true
-        musicInviteInfo.ZIndex = 12
-        musicInviteInfo.Parent = frame
-
-        musicInviteButton.MouseButton1Click:Connect(function()
-            if JoinMusicSession then JoinMusicSession(msgData.MusicSessionId) end
-        end)
         local pad = Instance.new("UIPadding")
         pad.PaddingBottom = UDim.new(0, 8)
         pad.Parent = frame
