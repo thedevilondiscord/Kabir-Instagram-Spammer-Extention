@@ -38,6 +38,7 @@ local MusicCatalogCategory = "Songs"
 local MusicCatalogSearch = ""
 local MusicSessionPollBusy = false
 local MusicSessionHeartbeatToken = 0
+local MusicCatalogLoadInProgress = false
 local MusicSelectedSong = nil
 local MusicLastObservedSongToken = nil
 local MusicQueue = {}
@@ -2895,7 +2896,6 @@ local function MusicRenderQueue()
         label.Position = UDim2.new(0, 4, 0, 0)
         label.BackgroundTransparency = 1
         label.Font = Enum.Font.Gotham
-        label.Text = tostring(i) .. ". " .. tostring(song.name or song.id) .. "  [
         label.Text = tostring(i) .. ". " .. tostring(song.name or song.id) .. "  [" .. tostring(song.id or "") .. "]"
         label.TextColor3 = Color3.fromRGB(215, 215, 225)
         label.TextSize = 8
@@ -2995,14 +2995,17 @@ local function MusicRebuildCatalog()
 end
 
 local function MusicLoadCatalog()
-    if MusicCatalogLoaded then return end
+    if MusicCatalogLoaded or MusicCatalogLoadInProgress then return end
+    MusicCatalogLoadInProgress = true
     local data = HttpRequest(MUSIC_DATABASE_URL, "GET")
     if type(data) ~= "table" then
+        MusicCatalogLoadInProgress = false
         ShowLocalSystemMessage("[Music Session] Music database could not be loaded. You can still join sessions by ID.", true)
         return
     end
     MusicCatalog = data
     MusicCatalogLoaded = true
+    MusicCatalogLoadInProgress = false
     if type(MusicCatalog[MusicCatalogCategory]) ~= "table" then
         for category, songs in pairs(MusicCatalog) do
             if type(songs) == "table" then MusicCatalogCategory = category break end
