@@ -2523,76 +2523,98 @@ local function StopMusicSound()
 end
 
 local function ApplyMusicAudio(state)
-    if MusicSessionState.Muted or not state or not state.CurrentSong then
-        StopMusicSound()
-        return
-    end
-
-    local song = state.CurrentSong
-    local soundId = tostring(song.id or song.Id or "")
-    if soundId == "" then
-        StopMusicSound()
-        return
-    end
-
-    if not MusicSound or MusicSound.SoundId ~= ("rbxassetid://" .. soundId) then
-        StopMusicSound()
-        MusicSound = Instance.new("Sound")
-        MusicSound.Name = "KronosMusicSessionAudio"
-        MusicSound.SoundId = "rbxassetid://" .. soundId
-        MusicSound.Volume = 0.55
-        MusicSound.Looped = false
-        MusicSound.Parent = SoundService
-        pcall(function() MusicSound:Play() end)
-    elseif not MusicSound.IsPlaying then
-        pcall(function() MusicSound:Play() end)
-    end
-
-    local startedAt = tonumber(state.StartedAt or 0) or 0
-    if startedAt > 0 and MusicSound.IsLoaded and MusicSound.TimeLength > 0 then
-        local target = math.max(0, os.time() - startedAt)
-        if math.abs((MusicSound.TimePosition or 0) - target) > 2.0 then
-            pcall(function() MusicSound.TimePosition = math.min(target, math.max(0, MusicSound.TimeLength - 0.05)) end)
+    local ok = pcall(function()
+        if MusicSessionState.Muted or type(state) ~= "table" or type(state.CurrentSong) ~= "table" then
+            StopMusicSound()
+            return
         end
+
+        local song = state.CurrentSong
+        local soundId = tostring(song.id or song.Id or ""):gsub("%s+", "")
+        if not soundId:match("^%d+$") then
+            StopMusicSound()
+            return
+        end
+
+        local wantedSoundId = "rbxassetid://" .. soundId
+        if not MusicSound or MusicSound.SoundId ~= wantedSoundId then
+            StopMusicSound()
+            local newSound = Instance.new("Sound")
+            newSound.Name = "KronosMusicSessionAudio"
+            newSound.SoundId = wantedSoundId
+            newSound.Volume = 0.55
+            newSound.Looped = false
+            newSound.Parent = SoundService
+            MusicSound = newSound
+            newSound:Play()
+        elseif not MusicSound.IsPlaying then
+            MusicSound:Play()
+        end
+
+        local startedAt = tonumber(state.StartedAt or 0) or 0
+        if startedAt > 0 and MusicSound and MusicSound.Parent and MusicSound.IsLoaded and MusicSound.TimeLength > 0 then
+            local target = math.max(0, os.time() - startedAt)
+            target = math.min(target, math.max(0, MusicSound.TimeLength - 0.05))
+            if math.abs((MusicSound.TimePosition or 0) - target) > 2.0 then
+                MusicSound.TimePosition = target
+            end
+        end
+    end)
+    if not ok then
+        StopMusicSound()
     end
 end
 
-local function RefreshMusicLibrary()
-    if MusicLibraryLoaded then return end
+local function RefreshMusicLibrary(forceRefresh)
+    if MusicLibraryLoaded and not forceRefresh then return end
     task.spawn(function()
-        local raw = HttpRequest(MUSIC_LIBRARY_URL, "GET")
-        if type(raw) == "table" then
-            MusicLibrary = {}
-            for category, songs in pairs(raw) do
-                if type(songs) == "table" then
-                    for _, song in ipairs(songs) do
-                        if type(song) == "table" and song.id and song.name then
-                            table.insert(MusicLibrary, {
-                                name = tostring(song.name),
-                                id = tostring(song.id),
+        local ok, raw = pcall(function()
+            return HttpRequest(MUSIC_LIBRARY_URL, "GET")
+        end)
+        if not ok or type(raw) ~= "table" then
+            MusicLibraryLoaded = false
+            return
+        end
+
+        local loaded = {}
+        for category, songs in pairs(raw) do
+            if type(songs) == "table" then
+                for _, song in ipairs(songs) do
+                    if type(song) == "table" and song.id ~= nil and song.name ~= nil then
+                        local id = tostring(song.id)
+                        local name = tostring(song.name)
+                        if id ~= "" and name ~= "" then
+                            table.insert(loaded, {
+                                name = name,
+                                id = id,
                                 category = tostring(category),
                             })
                         end
                     end
                 end
             end
-            table.sort(MusicLibrary, function(a, b)
-                return string.lower(a.name) < string.lower(b.name)
-            end)
-            MusicLibraryLoaded = true
         end
+
+        table.sort(loaded, function(a, b)
+            return string.lower(tostring(a.name)) < string.lower(tostring(b.name))
+        end)
+
+        MusicLibrary = loaded
+        MusicLibraryLoaded = true
+        pcall(RefreshMusicLibraryUI)
     end)
 end
 
 local function RefreshMusicLibraryUI()
+    if not MusicLibraryScroll or not MusicLibrarySearch then return end
     for _, child in ipairs(MusicLibraryScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
 
     local query = string.lower(MusicLibrarySearch.Text or "")
     local shown = 0
-    for _, song in ipairs(MusicLibrary) do
-        local haystack = string.lower(song.name .. " " .. song.id .. " " .. song.category)
+    for _, song in ipairs(MusicLibrary or {}) do
+        local haystack = string.lower(tostring(song.name) .. " " .. tostring(song.id) .. " " .. tostring(song.category))
         if query == "" or string.find(haystack, query, 1, true) then
             shown = shown + 1
             if shown > 80 then break end
@@ -2904,11 +2926,11 @@ local function SendMusicInvite(isGlobal)
         return
     end
 
-    local sessionId = MusicSessionState.Id
+    local sessionId = tostring(MusicSessionState.Id)
     local payload = {
-        ClientMessageId = LocalPlayer.UserId .. "_musicinvite_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999)),
+        ClientMessageId = tostring(LocalPlayer.UserId) .. "_musicinvite_" .. tostring(math.floor(os.clock() * 1000000)) .. "_" .. tostring(math.random(100000, 999999)),
         Username = LocalPlayer.Name,
-        DisplayName = GetFormattedDisplayName(LocalPlayer.DisplayName, true),
+        DisplayName = tostring(LocalPlayer.DisplayName),
         Text = "🎵 invited you to join their Music Session • ID: " .. sessionId,
         Timestamp = os.time(),
         Role = GetAssignedOrCalculatedRole(LocalPlayer.Name),
@@ -2916,7 +2938,7 @@ local function SendMusicInvite(isGlobal)
         IsPrivate = false,
         IsMusicSessionInvite = true,
         MusicSessionId = sessionId,
-        MusicSessionHost = LocalPlayer.DisplayName,
+        MusicSessionHost = tostring(LocalPlayer.DisplayName),
     }
 
     local endpoint = isGlobal and GLOBAL_MESSAGES_ENDPOINT or SERVER_MESSAGES_ENDPOINT
@@ -2924,12 +2946,22 @@ local function SendMusicInvite(isGlobal)
     local ui = isGlobal and GlobalUIElements or ServerUIElements
     local key = "local_" .. payload.ClientMessageId
     cache[key] = payload
-    local card = CreateMessageCard(payload, isGlobal)
-    card.Visible = (ActiveTab == (isGlobal and "GLOBAL" or "SERVER"))
-    table.insert(ui, card)
+
+    -- The music system must never be able to crash the main chat renderer.
+    if type(CreateMessageCard) == "function" then
+        local ok, card = pcall(function()
+            return CreateMessageCard(payload, isGlobal)
+        end)
+        if ok and card then
+            card.Visible = (ActiveTab == (isGlobal and "GLOBAL" or "SERVER"))
+            table.insert(ui, card)
+        end
+    end
 
     task.spawn(function()
-        pcall(function() HttpRequest(endpoint, "POST", payload) end)
+        pcall(function()
+            HttpRequest(endpoint, "POST", payload)
+        end)
     end)
 end
 
@@ -2970,8 +3002,8 @@ MusicSongIdInput.FocusLost:Connect(function(enterPressed)
     if enterPressed and MusicSessionState.IsHost then HostPlaySong() end
 end)
 
-RefreshMusicLibrary()
-RefreshMusicSessionUI(nil)
+pcall(RefreshMusicLibrary)
+pcall(function() RefreshMusicSessionUI(nil) end)
 
 -- Input Setup
 local InputBarFrame = Instance.new("Frame")
@@ -3589,8 +3621,8 @@ ServerTabBtn.MouseButton1Click:Connect(function() SwitchTab("SERVER") end)
 ProfileTabBtn.MouseButton1Click:Connect(function() SwitchTab("PROFILE") end)
 AboutTabBtn.MouseButton1Click:Connect(function() SwitchTab("ABOUT") end)
 MusicSessionTabBtn.MouseButton1Click:Connect(function()
-    RefreshMusicLibrary()
-    RefreshMusicLibraryUI()
+    pcall(RefreshMusicLibrary)
+    pcall(RefreshMusicLibraryUI)
     SwitchTab("MUSIC")
 end)
 
