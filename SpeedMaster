@@ -1073,26 +1073,68 @@ end
 -- ============================================================================
 -- HTTP HANDLER (MULTI-EXECUTOR COMPATIBLE)
 -- ============================================================================
-local http_req = (syn and syn.request) or (http and http.request) or http_request or request or (Fluxus and fluxus.request)
+local http_req =
+    (syn and syn.request)
+    or (http and http.request)
+    or http_request
+    or request
+    or (Fluxus and fluxus.request)
 
 local function HttpRequest(url, method, data)
-    if not http_req then return nil end
+    if type(http_req) ~= "function" then
+        return nil
+    end
+
+    local encodedBody = nil
+    if data ~= nil then
+        local encodeOk, encoded = pcall(function()
+            return HttpService:JSONEncode(data)
+        end)
+        if not encodeOk then
+            return nil
+        end
+        encodedBody = encoded
+    end
+
     local success, response = pcall(function()
         return http_req({
-            Url = url,
-            Method = method or "GET",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = data and HttpService:JSONEncode(data) or nil
+            Url = tostring(url),
+            Method = tostring(method or "GET"):upper(),
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["Accept"] = "application/json",
+            },
+            Body = encodedBody,
         })
     end)
 
-    if success and response and response.Body then
-        local decodedSuccess, decodedData = pcall(function()
-            return HttpService:JSONDecode(response.Body)
-        end)
-        return decodedSuccess and decodedData or nil
+    if not success or response == nil then
+        return nil
     end
-    return nil
+
+    local body = nil
+    if type(response) == "string" then
+        body = response
+    elseif type(response) == "table" then
+        body = response.Body or response.body
+    end
+
+    if body == nil or body == "" then
+        return response
+    end
+
+    if type(body) == "table" then
+        return body
+    end
+
+    local decodedSuccess, decodedData = pcall(function()
+        return HttpService:JSONDecode(body)
+    end)
+    if decodedSuccess then
+        return decodedData
+    end
+
+    return response
 end
 
 -- ============================================================================
@@ -1263,31 +1305,45 @@ end
 -- ============================================================================
 -- GLASSMORPHIC UI BUILDER
 -- ============================================================================
-local BlurEffect = Lighting:FindFirstChild("Kronos_GlassBlur") or Instance.new("DepthOfFieldEffect")
-BlurEffect.Name = "Kronos_GlassBlur"
-BlurEffect.FarIntensity = 0.1
-BlurEffect.FocusDistance = 0
-BlurEffect.InFocusRadius = 30
-BlurEffect.NearIntensity = 0.75
-BlurEffect.Parent = Lighting
+local BlurEffect = Lighting:FindFirstChild("Kronos_GlassBlur")
+if BlurEffect and not BlurEffect:IsA("DepthOfFieldEffect") then
+    pcall(function() BlurEffect:Destroy() end)
+    BlurEffect = nil
+end
+if not BlurEffect then
+    BlurEffect = Instance.new("DepthOfFieldEffect")
+    BlurEffect.Name = "Kronos_GlassBlur"
+    BlurEffect.Parent = Lighting
+end
+pcall(function()
+    BlurEffect.FarIntensity = 0.1
+    BlurEffect.FocusDistance = 0
+    BlurEffect.InFocusRadius = 30
+    BlurEffect.NearIntensity = 0.75
+end)
 
 -- KABIR rainbow loop (About tab only)
 task.spawn(function()
     local hue = 0
     while true do
         task.wait(0.03)
-        if not script.Parent then break end
+        if not ScreenGui or not ScreenGui.Parent then
+            continue
+        end
         hue = (hue + 0.008) % 1
-        local found = false
-        for _, obj in ipairs(script.Parent:GetDescendants()) do
+        for _, obj in ipairs(ScreenGui:GetDescendants()) do
             if obj:IsA("TextLabel") and obj.Text == "KABIR" then
                 obj.TextColor3 = Color3.fromHSV(hue, 0.9, 1)
-                found = true
                 break
             end
         end
-        if not found then break end
     end
+end)
+
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+pcall(function()
+    local oldGui = PlayerGui:FindFirstChild("Kronos_Chat_Gui")
+    if oldGui then oldGui:Destroy() end
 end)
 
 ScreenGui = Instance.new("ScreenGui")
@@ -1295,7 +1351,7 @@ ScreenGui.Name = "Kronos_Chat_Gui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Enabled = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -3098,8 +3154,8 @@ MusicStopButton.Visible = false
 MusicNextButton.Visible = false
 MusicRenderQueue()
 task.spawn(function()
-    task.wait(0.5)
-    MusicLoadCatalog()
+    task.wait(1.5)
+    pcall(MusicLoadCatalog)
 end)
 
 -- Input Setup
