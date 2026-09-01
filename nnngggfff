@@ -1,1 +1,339 @@
+-- SAIKI MUSIC — Standalone Loading / Consent GUI
+-- 4-second loading screen -> "Load Saiki Music !?" prompt.
+-- Hell Yess closes the intro. Nah Nvm shows the supplied image/sound for
+-- 5 seconds and then kicks the local player.
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+local GUI_NAME = "SaikiMusic_Intro"
+local PROFILE_IMAGE = "rbxthumb://type=Asset&id=6294726987&w=420&h=420"
+local GITHUB_IMAGE = "https://raw.githubusercontent.com/thedevilondiscord/Why-Do-u-hate-me-T-T-/main/1147010598883426560.jpg"
+local SOUND_ID = "rbxassetid://101110156267710"
+
+pcall(function()
+	local old = CoreGui:FindFirstChild(GUI_NAME)
+	if old then old:Destroy() end
+end)
+
+local gui = Instance.new("ScreenGui")
+gui.Name = GUI_NAME
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = CoreGui
+
+local function corner(parent, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius)
+	c.Parent = parent
+end
+
+local function stroke(parent, color, thickness, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness or 1
+	s.Transparency = transparency or 0
+	s.Parent = parent
+end
+
+local function gradient(parent)
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(221,235,255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(242,225,252)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(232,249,244)),
+	})
+	g.Rotation = 20
+	g.Parent = parent
+end
+
+local function shadow(parent)
+	local s = Instance.new("Frame")
+	s.AnchorPoint = Vector2.new(.5,.5)
+	s.Position = UDim2.new(.5,4,.5,6)
+	s.Size = UDim2.new(1,12,1,12)
+	s.BackgroundColor3 = Color3.fromRGB(80,70,95)
+	s.BackgroundTransparency = .84
+	s.BorderSizePixel = 0
+	s.ZIndex = parent.ZIndex - 1
+	s.Parent = parent
+	corner(s, 24)
+end
+
+--// Loading card
+local card = Instance.new("Frame")
+card.AnchorPoint = Vector2.new(.5,.5)
+card.Position = UDim2.fromScale(.5,.5)
+card.Size = UDim2.fromOffset(500,300)
+card.BackgroundColor3 = Color3.fromRGB(244,246,255)
+card.BorderSizePixel = 0
+card.ZIndex = 10
+card.Parent = gui
+corner(card,26)
+stroke(card,Color3.fromRGB(190,205,225),1.5,.12)
+gradient(card)
+shadow(card)
+
+local avatarBack = Instance.new("Frame")
+avatarBack.AnchorPoint = Vector2.new(.5,0)
+avatarBack.Position = UDim2.new(.5,0,0,27)
+avatarBack.Size = UDim2.fromOffset(82,82)
+avatarBack.BackgroundColor3 = Color3.fromRGB(255,255,255)
+avatarBack.BorderSizePixel = 0
+avatarBack.ZIndex = 12
+avatarBack.Parent = card
+corner(avatarBack,41)
+stroke(avatarBack,Color3.fromRGB(205,170,220),2,.05)
+
+local avatar = Instance.new("ImageLabel")
+avatar.BackgroundTransparency = 1
+avatar.Size = UDim2.fromScale(1,1)
+avatar.Image = PROFILE_IMAGE
+avatar.ScaleType = Enum.ScaleType.Crop
+avatar.ZIndex = 13
+avatar.Parent = avatarBack
+corner(avatar,41)
+
+local title = Instance.new("TextLabel")
+title.BackgroundTransparency = 1
+title.AnchorPoint = Vector2.new(.5,0)
+title.Position = UDim2.new(.5,0,0,121)
+title.Size = UDim2.new(1,-60,0,32)
+title.Font = Enum.Font.GothamBold
+title.Text = "SAIKI MUSIC"
+title.TextSize = 25
+title.TextColor3 = Color3.fromRGB(53,49,67)
+title.ZIndex = 12
+title.Parent = card
+
+local by = Instance.new("TextLabel")
+by.BackgroundTransparency = 1
+by.AnchorPoint = Vector2.new(.5,0)
+by.Position = UDim2.new(.5,0,0,153)
+by.Size = UDim2.new(1,-60,0,24)
+by.Font = Enum.Font.GothamMedium
+by.Text = "Script by Saiki"
+by.TextSize = 14
+by.TextColor3 = Color3.fromRGB(116,108,130)
+by.ZIndex = 12
+by.Parent = card
+
+local status = by:Clone()
+status.Name = "Status"
+status.Position = UDim2.new(.5,0,0,193)
+status.Size = UDim2.new(1,-70,0,22)
+status.Text = "Loading Saiki Music..."
+status.TextSize = 12
+status.Parent = card
+
+local bar = Instance.new("Frame")
+bar.AnchorPoint = Vector2.new(.5,0)
+bar.Position = UDim2.new(.5,0,0,229)
+bar.Size = UDim2.new(1,-90,0,12)
+bar.BackgroundColor3 = Color3.fromRGB(255,255,255)
+bar.BackgroundTransparency = .12
+bar.BorderSizePixel = 0
+bar.ZIndex = 12
+bar.Parent = card
+corner(bar,6)
+
+local fill = Instance.new("Frame")
+fill.Size = UDim2.new(0,0,1,0)
+fill.BackgroundColor3 = Color3.fromRGB(225,105,164)
+fill.BorderSizePixel = 0
+fill.ZIndex = 13
+fill.Parent = bar
+corner(fill,6)
+
+local pg = Instance.new("UIGradient")
+pg.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0,Color3.fromRGB(229,89,154)),
+	ColorSequenceKeypoint.new(.5,Color3.fromRGB(186,129,229)),
+	ColorSequenceKeypoint.new(1,Color3.fromRGB(104,202,184))
+})
+pg.Parent = fill
+
+local percent = status:Clone()
+percent.Name = "Percent"
+percent.Position = UDim2.new(.5,0,0,248)
+percent.Size = UDim2.new(1,-80,0,20)
+percent.Text = "0%"
+percent.TextSize = 11
+percent.Parent = card
+
+local start = os.clock()
+while true do
+	local a = math.clamp((os.clock()-start)/4,0,1)
+	fill.Size = UDim2.new(a,0,1,0)
+	percent.Text = string.format("%d%%",math.floor(a*100))
+	if a < .35 then
+		status.Text = "Preparing Saiki Music..."
+	elseif a < .7 then
+		status.Text = "Loading interface..."
+	elseif a < 1 then
+		status.Text = "Almost ready..."
+	else
+		status.Text = "Ready!"
+	end
+	if a >= 1 then break end
+	task.wait()
+end
+
+task.wait(.1)
+card:Destroy()
+
+--// Confirmation card
+local confirm = Instance.new("Frame")
+confirm.AnchorPoint = Vector2.new(.5,.5)
+confirm.Position = UDim2.fromScale(.5,.5)
+confirm.Size = UDim2.fromOffset(430,235)
+confirm.BackgroundColor3 = Color3.fromRGB(244,246,255)
+confirm.BorderSizePixel = 0
+confirm.ZIndex = 20
+confirm.Parent = gui
+corner(confirm,24)
+stroke(confirm,Color3.fromRGB(190,205,225),1.5,.12)
+gradient(confirm)
+shadow(confirm)
+
+local icon = Instance.new("ImageLabel")
+icon.AnchorPoint = Vector2.new(.5,0)
+icon.Position = UDim2.new(.5,0,0,22)
+icon.Size = UDim2.fromOffset(52,52)
+icon.BackgroundTransparency = 1
+icon.Image = PROFILE_IMAGE
+icon.ScaleType = Enum.ScaleType.Crop
+icon.ZIndex = 21
+icon.Parent = confirm
+corner(icon,26)
+
+local question = Instance.new("TextLabel")
+question.BackgroundTransparency = 1
+question.AnchorPoint = Vector2.new(.5,0)
+question.Position = UDim2.new(.5,0,0,82)
+question.Size = UDim2.new(1,-50,0,38)
+question.Font = Enum.Font.GothamBold
+question.Text = "Load Saiki Music !?"
+question.TextSize = 22
+question.TextColor3 = Color3.fromRGB(52,48,66)
+question.ZIndex = 21
+question.Parent = confirm
+
+local hint = question:Clone()
+hint.Position = UDim2.new(.5,0,0,120)
+hint.Size = UDim2.new(1,-60,0,24)
+hint.Font = Enum.Font.GothamMedium
+hint.Text = "Choose an option to continue."
+hint.TextSize = 12
+hint.TextColor3 = Color3.fromRGB(116,108,130)
+hint.Parent = confirm
+
+local yes = Instance.new("TextButton")
+yes.AnchorPoint = Vector2.new(1,0)
+yes.Position = UDim2.new(.5,-7,0,164)
+yes.Size = UDim2.fromOffset(160,42)
+yes.BackgroundColor3 = Color3.fromRGB(225,111,165)
+yes.BorderSizePixel = 0
+yes.Font = Enum.Font.GothamBold
+yes.Text = "Hell Yess"
+yes.TextSize = 13
+yes.TextColor3 = Color3.fromRGB(255,255,255)
+yes.AutoButtonColor = false
+yes.ZIndex = 22
+yes.Parent = confirm
+corner(yes,14)
+
+local no = yes:Clone()
+no.Name = "NahNvm"
+no.AnchorPoint = Vector2.new(0,0)
+no.Position = UDim2.new(.5,7,0,164)
+no.BackgroundColor3 = Color3.fromRGB(255,255,255)
+no.Text = "Nah Nvm"
+no.TextColor3 = Color3.fromRGB(72,66,82)
+no.Parent = confirm
+corner(no,14)
+stroke(no,Color3.fromRGB(201,194,211),1,.15)
+
+local done = false
+
+yes.MouseButton1Click:Connect(function()
+	if done then return end
+	done = true
+	gui:Destroy()
+end)
+
+local function request()
+	return (syn and syn.request) or (http and http.request) or http_request or request
+end
+
+local function githubImage()
+	local req = request()
+	if not req or not writefile or not getcustomasset then return nil end
+	local ok, res = pcall(function()
+		return req({Url=GITHUB_IMAGE,Method="GET"})
+	end)
+	if not ok or not res or type(res.Body) ~= "string" or #res.Body == 0 then
+		return nil
+	end
+
+	local file = "saiki_1147010598883426560.jpg"
+	local wrote = pcall(function()
+		if isfile and isfile(file) and delfile then delfile(file) end
+		writefile(file,res.Body)
+	end)
+	if not wrote then return nil end
+
+	local okAsset, asset = pcall(function()
+		return getcustomasset(file)
+	end)
+	return okAsset and asset or nil
+end
+
+no.MouseButton1Click:Connect(function()
+	if done then return end
+	done = true
+
+	confirm.Visible = false
+
+	local white = Instance.new("Frame")
+	white.Size = UDim2.fromScale(1,1)
+	white.BackgroundColor3 = Color3.fromRGB(255,255,255)
+	white.BorderSizePixel = 0
+	white.ZIndex = 100
+	white.Parent = gui
+
+	local img = Instance.new("ImageLabel")
+	img.AnchorPoint = Vector2.new(.5,.5)
+	img.Position = UDim2.fromScale(.5,.5)
+	img.Size = UDim2.fromOffset(500,500)
+	img.BackgroundTransparency = 1
+	img.ScaleType = Enum.ScaleType.Fit
+	img.ZIndex = 101
+	img.Parent = white
+
+	local asset = githubImage()
+	if asset then img.Image = asset end
+
+	local sound = Instance.new("Sound")
+	sound.SoundId = SOUND_ID
+	sound.Volume = 1
+	sound.Parent = SoundService
+	pcall(function() SoundService:PlayLocalSound(sound) end)
+
+	task.wait(5)
+
+	pcall(function()
+		sound:Stop()
+		sound:Destroy()
+	end)
+
+	gui:Destroy()
+
+	pcall(function()
+		LocalPlayer:Kick("Saiki Music declined.")
+	end)
+end)
