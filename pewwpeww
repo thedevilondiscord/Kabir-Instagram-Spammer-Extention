@@ -248,7 +248,7 @@ end
 ----------------------------------------------------------------
 
 local CustomRPName = "🎵 ꜱᴀɪᴋɪ ᴍᴜꜱɪᴄ 🎵"
-local CustomRPBio = "ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ " .. tostring(LocalPlayer.DisplayName or "") .. " ɪɴ ᴛʜɪꜱ ꜰᴏɴᴛ"
+local CustomRPBio = tostring(LocalPlayer.DisplayName or LocalPlayer.Name or "")
 
 local function applyRPProfile()
     task.spawn(function()
@@ -285,6 +285,35 @@ local function applyRPProfile()
 end
 
 task.spawn(applyRPProfile)
+
+-- Continuous rainbow RP colours for both RP name and bio.
+task.spawn(function()
+    local reFolder = ReplicatedStorage:WaitForChild("RE", 10)
+    if not reFolder then
+        return
+    end
+
+    local colorRemote = reFolder:WaitForChild("1RPNam1eColo1r", 5)
+        or reFolder:FindFirstChild("RPNameColor")
+
+    if not colorRemote then
+        return
+    end
+
+    local rainbowStart = tick()
+
+    while not State.destroyed do
+        local hue = ((tick() - rainbowStart) * 0.12) % 1
+        local rainbowColor = Color3.fromHSV(hue, 0.82, 1)
+
+        pcall(function()
+            colorRemote:FireServer("PickingRPNameColor", rainbowColor)
+            colorRemote:FireServer("PickingRPBioColor", rainbowColor)
+        end)
+
+        task.wait(0.10)
+    end
+end)
 
 ----------------------------------------------------------------
 -- HTTP
@@ -828,7 +857,7 @@ local ThemeButton = create("TextButton", {
     AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.new(1, -111, 0, 27),
     Size = UDim2.fromOffset(30, 30),
-    Text = "☾",
+    Text = "🌙",
     Font = Enum.Font.GothamBold,
     TextSize = 17,
     TextColor3 = Color3.fromRGB(65, 52, 72),
@@ -1623,7 +1652,7 @@ local LoopButton = create("TextButton", {
         215
     ),
 
-    Text = "LOOP",
+    Text = "🔁",
 
     Font = Enum.Font.GothamBold,
     TextSize = 8,
@@ -2197,7 +2226,7 @@ applyTheme = function()
 
     if not dark then
         restoreLightTheme()
-        ThemeButton.Text = "☾"
+        ThemeButton.Text = "🌙"
         ThemeButton.TextColor3 = Color3.fromRGB(65, 52, 72)
         ThemeButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         ThemeButton.BackgroundTransparency = 0.35
@@ -3434,7 +3463,7 @@ local function cycleLoop()
             "Track"
 
         LoopButton.Text =
-            "LOOP 1"
+            "🔁"
 
         showToast(
             "Loop Track ON"
@@ -3447,7 +3476,7 @@ local function cycleLoop()
             "Queue"
 
         LoopButton.Text =
-            "LOOP ALL"
+            "🔁"
 
         showToast(
             "Loop All ON"
@@ -3459,7 +3488,7 @@ local function cycleLoop()
             "Off"
 
         LoopButton.Text =
-            "LOOP"
+            "🔁"
 
         showToast(
             "Loop OFF"
