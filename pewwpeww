@@ -244,6 +244,49 @@ local function saveSettings()
 end
 
 ----------------------------------------------------------------
+-- BROOKHAVEN ROLEPLAY PROFILE
+----------------------------------------------------------------
+
+local CustomRPName = "🎵 ꜱᴀɪᴋɪ ᴍᴜꜱɪᴄ 🎵"
+local CustomRPBio = "ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ " .. tostring(LocalPlayer.DisplayName or "") .. " ɪɴ ᴛʜɪꜱ ꜰᴏɴᴛ"
+
+local function applyRPProfile()
+    task.spawn(function()
+        local reFolder = ReplicatedStorage:WaitForChild("RE", 10)
+        if not reFolder then
+            return
+        end
+
+        local rpRemote = reFolder:WaitForChild("1RPNam1eTex1t", 5)
+            or reFolder:FindFirstChild("RPNameText")
+            or reFolder:FindFirstChild("RPName")
+
+        if rpRemote then
+            pcall(function()
+                rpRemote:FireServer("RolePlayName", CustomRPName)
+                rpRemote:FireServer("RolePlayBio", CustomRPBio)
+            end)
+        end
+
+        local colorRemote = reFolder:WaitForChild("1RPNam1eColo1r", 5)
+            or reFolder:FindFirstChild("RPNameColor")
+
+        if colorRemote then
+            local rpColor = State.theme == "Dark"
+                and Color3.fromRGB(255, 255, 255)
+                or Color3.fromRGB(0, 0, 0)
+
+            pcall(function()
+                colorRemote:FireServer("PickingRPNameColor", rpColor)
+                colorRemote:FireServer("PickingRPBioColor", rpColor)
+            end)
+        end
+    end)
+end
+
+task.spawn(applyRPProfile)
+
+----------------------------------------------------------------
 -- HTTP
 ----------------------------------------------------------------
 
@@ -672,7 +715,7 @@ local Header = create("Frame", {
 local HeaderBrand = create("ImageLabel", {
     Name = "HeaderBrand",
     Size = UDim2.fromOffset(30, 30),
-    Position = UDim2.fromOffset(18, 6),
+    Position = UDim2.fromOffset(18, 19),
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     Image = "rbxthumb://type=Asset&id=6379534047&w=150&h=150",
