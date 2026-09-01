@@ -2484,7 +2484,7 @@ do
 
     t22.value72 = nil
 
-    -- MUSIC TAB: available to every client
+    -- MUSIC is available to every client.
     t22.value72 = v77("MUSIC", 6, "🎵")
 end
 do
@@ -8683,7 +8683,12 @@ function t1.value2()
 			Method = "GET"
 		})
 
-        if v1325.Success and v1325.Body ~= "null" then
+        local v1325ok = v1325 and v1325.Success
+        if not v1325ok and v1325 and type(v1325.StatusCode) == "number" then
+            v1325ok = v1325.StatusCode >= 200 and v1325.StatusCode < 300
+        end
+
+        if v1325ok and v1325.Body ~= "null" then
             local data = t4.value2:JSONDecode(v1325.Body)
 
             if type(data) == "table" then
@@ -8704,11 +8709,16 @@ function t1.value3()
 
     pcall(function()
         local v1329 = v936({
-			Url = t4.value21 .. ".json?orderBy=\"$key\"&limitToLast=25",
+			Url = t4.value21 .. ".json?limitToLast=25",
 			Method = "GET"
 		})
 
-        if v1329.Success and (v1329.Body ~= "null" and v1329.Body ~= t22.value134) then
+        local v1329ok = v1329 and v1329.Success
+        if not v1329ok and v1329 and type(v1329.StatusCode) == "number" then
+            v1329ok = v1329.StatusCode >= 200 and v1329.StatusCode < 300
+        end
+
+        if v1329ok and (v1329.Body ~= "null" and v1329.Body ~= t22.value134) then
             local _ = v1329.Body
             local data = t4.value2:JSONDecode(v1329.Body)
 
@@ -10144,7 +10154,6 @@ function t22.value170()
         end)
     end)
 end
--- MUSIC CONTROLS: available to every client
 do
     local u286
 
@@ -10706,7 +10715,11 @@ task.spawn(function()
 				Method = "GET"
 			})
 
-            if not v1448 or not v1448.Success then
+            local v1448ok = v1448 and v1448.Success
+            if not v1448ok and v1448 and type(v1448.StatusCode) == "number" then
+                v1448ok = v1448.StatusCode >= 200 and v1448.StatusCode < 300
+            end
+            if not v1448ok then
                 return
             end
 
@@ -10733,7 +10746,6 @@ task.spawn(function()
 
             t22.value171 = Body
 
-            -- Every client is allowed to receive/play the current music stream.
             local ok, result = pcall(function()
                 return t4.value2:JSONDecode(Body)
             end)
