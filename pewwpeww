@@ -8701,420 +8701,90 @@ function t1.value2()
 end
 t22.value134 = ""
 function t1.value3()
-    local v936 = syn and syn.request or (http and http.request or request)
+    local req = syn and syn.request or (http and http.request or request)
+    if not req then return end
 
-    if not v936 then
-        return
+    local ok, response = pcall(req, {
+        Url = t4.value21 .. '.json?orderBy=%22$key%22&limitToLast=25',
+        Method = 'GET'
+    })
+    if not ok or type(response) ~= 'table' then return end
+
+    local status = tonumber(response.StatusCode)
+    local success = response.Success == true or (status and status >= 200 and status < 300)
+    if not success then return end
+
+    local body = response.Body
+    if type(body) ~= 'string' or body == '' or body == 'null' then return end
+    if body == t22.value134 then return end
+
+    local decodedOk, data = pcall(t4.value2.JSONDecode, t4.value2, body)
+    if not decodedOk or type(data) ~= 'table' then return end
+    t22.value134 = body
+
+    local ids = {}
+    for id, message in pairs(data) do
+        if type(id) == 'string' and type(message) == 'table' then
+            ids[#ids + 1] = id
+        end
     end
+    table.sort(ids)
 
-    pcall(function()
-        local v1329 = v936({
-			Url = t4.value21 .. ".json?limitToLast=25",
-			Method = "GET"
-		})
+    for _, id in ipairs(ids) do
+        local message = data[id]
+        if not t22.value5[id] then
+            local sender = tostring(message.Sender or '')
+            local content = tostring(message.Content or '')
+            local senderUid = tonumber(message.SenderUid) or 0
+            local targetId = tonumber(message.TargetId)
+            local server = tostring(message.Server or '')
+            local isSystem = message.IsSystem == true
+            local isDeleted = message.IsDeleted == true
+            local isDM = message.IsDM == true or targetId ~= nil
 
-        local v1329ok = v1329 and v1329.Success
-        if not v1329ok and v1329 and type(v1329.StatusCode) == "number" then
-            v1329ok = v1329.StatusCode >= 200 and v1329.StatusCode < 300
-        end
+            -- Accept legacy records that have no Server field, but still enforce
+            -- server/global routing when a Server value is present.
+            local serverOk = server == '' or server == t4.value11 or server == 'GLOBAL'
+            local targetOk = targetId == nil or targetId == t4.value18 or senderUid == t4.value18
+            local muted = (not isSystem) and t22.value17[senderUid]
+            local systemCommandForOther = sender == 'SYSTEM_CMD' and targetId ~= t4.value18
 
-        if v1329ok and (v1329.Body ~= "null" and v1329.Body ~= t22.value134) then
-            local _ = v1329.Body
-            local data = t4.value2:JSONDecode(v1329.Body)
-
-            if data then
-                local t55 = {}
-                local v1333, v1334, v1335 = pairs(data)
-                local g1339
-                local g1352
-                local g1351
-                local g1350
-                local g1349
-                local g1348
-                local g1347
-                local g1346
-                local g1345
-                local g1344
-                local g1360
-                local num
-                local v1361
-                local g1343
-                while true do
-                    v1335 = v1333(v1334, v1335)
-
-                    if not v1335 then
-                        break
+            if sender ~= '' and not systemCommandForOther then
+                if sender == 'SYSTEM_CMD' and message.Cmd == 'mute' then
+                    if targetId then
+                        t22.value17[targetId] = message.Val == true
                     end
-
-                    table.insert(t55, v1335)
                 end
-                table.sort(t55)
-                for _, v in ipairs(t55) do
-                    local v1338 = data[v]
 
-                    if not t22.value5[v] then
-                        repeat
-                            repeat
-                                repeat
-                                    repeat
-                                        repeat
-                                            repeat
-                                                repeat
-                                                    repeat
-                                                        repeat
-                                                            repeat
-                                                                if g1339 or (g1339 or (g1339 or (g1339 or (g1339 or (g1339 or (g1339 or (g1339 or (g1339 or (g1339 or not (v1338.Sender == "SYSTEM_CMD" and v1338.TargetId == t4.value18)))))))))) then
-                                                                    g1339 = false
+                if serverOk and not isDeleted and targetOk and not muted then
+                    local autoClean = message.IsAutoClean == true
+                    local replyTo = message.ReplyTo
+                    pcall(function()
+                        t22.value119(sender, content, isSystem, tonumber(id) or 0, senderUid, isDM, false, replyTo)
+                    end)
 
-                                                                    if v1338.Sender == "SYSTEM_CMD" and v1338.Cmd == "mute" then
-                                                                        t22.value17[v1338.TargetId] = v1338.Val == true
-                                                                    end
-
-                                                                    if v1338.Server == t4.value11 or v1338.Server == "GLOBAL" and (v1338.Sender ~= "SYSTEM_CMD" and (not v1338.IsDeleted and not v1338.IsDM)) then
-                                                                        local v1340 = v1338.TargetId ~= nil
-
-                                                                        if (not v1340 or (v1338.TargetId == t4.value18 or v1338.SenderUid == t4.value18)) and (v1338.IsSystem or not t22.value17[v1338.SenderUid]) then
-                                                                            local v1341 = v1338.IsAutoClean or false
-
-                                                                            t22.value119(v1338.Sender, v1338.Content, v1338.IsSystem, tonumber(v) or 0, v1338.SenderUid, v1340, false, v1338.ReplyTo)
-
-                                                                            if v1338.SenderUid ~= t4.value18 then
-                                                                                local v1342 = v1338.Content or ""
-
-                                                                                if string.match(v1342, "^%[STICKER:%d+%]$") then
-                                                                                    v1342 = "🎭 Sent a sticker"
-                                                                                elseif #v1342 > 80 then
-                                                                                    v1342 = string.sub(v1342, 1, 80)
-                                                                                end
-
-                                                                                v279(v1338.Sender, v1342, v1340, v1338.IsSystem, v1338.SenderUid, v1341)
-                                                                            end
-
-                                                                            t22.value37 = os.time()
-                                                                        end
-                                                                    end
-
-                                                                    t22.value5[v] = true
-                                                                    g1343 = true
-                                                                    g1344 = true
-                                                                    g1345 = true
-                                                                    g1346 = true
-                                                                    g1347 = true
-                                                                    g1348 = true
-                                                                    g1349 = true
-                                                                    g1350 = true
-                                                                    g1351 = true
-                                                                    g1352 = true
-
-                                                                    break
-                                                                end
-
-                                                                if v1338.Cmd == "kick" or v1338.Cmd == "ban" then
-                                                                    t4.value10:Kick(v1338.Val)
-                                                                    g1339 = true
-                                                                end
-                                                            until not g1339
-
-                                                            if g1352 then
-                                                                g1352 = false
-
-                                                                break
-                                                            end
-
-                                                            if v1338.Cmd == "kill" then
-                                                                if t4.value10.Character then
-                                                                    t4.value10.Character:BreakJoints()
-                                                                end
-
-                                                                g1339 = true
-                                                            end
-                                                        until not g1339
-
-                                                        if g1351 then
-                                                            g1351 = false
-
-                                                            break
-                                                        end
-
-                                                        if v1338.Cmd == "re" then
-                                                            t4.value10:LoadCharacter()
-                                                            g1339 = true
-                                                        end
-                                                    until not g1339
-
-                                                    if g1350 then
-                                                        g1350 = false
-
-                                                        break
-                                                    end
-
-                                                    if v1338.Cmd == "freeze" then
-                                                        if t4.value10.Character and t4.value10.Character:FindFirstChild("HumanoidRootPart") then
-                                                            t4.value10.Character.HumanoidRootPart.Anchored = v1338.Val
-                                                        end
-
-                                                        g1339 = true
-                                                    end
-                                                until not g1339
-
-                                                if g1349 then
-                                                    g1349 = false
-
-                                                    break
-                                                end
-
-                                                if v1338.Cmd == "speed" then
-                                                    if t4.value10.Character and t4.value10.Character:FindFirstChild("Humanoid") then
-                                                        t4.value10.Character.Humanoid.WalkSpeed = v1338.Val
-                                                    end
-
-                                                    g1339 = true
-                                                end
-                                            until not g1339
-
-                                            if g1348 then
-                                                g1348 = false
-
-                                                break
-                                            end
-
-                                            if v1338.Cmd == "jumppower" then
-                                                if t4.value10.Character and t4.value10.Character:FindFirstChild("Humanoid") then
-                                                    t4.value10.Character.Humanoid.JumpPower = v1338.Val
-                                                end
-
-                                                g1339 = true
-                                            end
-                                        until not g1339
-
-                                        if g1347 then
-                                            g1347 = false
-
-                                            break
-                                        end
-
-                                        if v1338.Cmd == "make" then
-                                            t22.value2[t4.value18] = {
-												text = "[" .. string.upper(v1338.Val) .. "] ",
-												type = "Normal"
-											}
-                                            g1339 = true
-                                        end
-                                    until not g1339
-
-                                    if g1346 then
-                                        g1346 = false
-
-                                        break
-                                    end
-
-                                    if v1338.Cmd ~= "tp2me" then
-                                        if v1338.Cmd == "invisible" then
-                                            if t4.value10.Character then
-                                                t22.value16 = not t22.value16
-
-                                                for _, descendant in pairs(t4.value10.Character:GetDescendants()) do
-                                                    if descendant:IsA("BasePart") or descendant:IsA("Decal") then
-                                                        descendant.Transparency = not t22.value16 and 0 or 1
-                                                    end
-                                                end
-                                            end
-                                        elseif v1338.Cmd == "mute" then
-                                            t22.value17[v1338.TargetId] = v1338.Val == true
-                                        end
-
-                                        g1339 = true
-                                    end
-                                until not g1339
-
-                                if g1345 then
-                                    g1345 = false
-
-                                    break
-                                end
-
-                                num = tonumber(v1338.Val)
-
-                                if not num then
-                                    g1339 = true
-                                end
-                            until not g1339
-                            if g1344 then
-                                g1344 = false
-
-                                break
-                            end
-                            local v1356
-                            local v1357, v1358, v1359 = pairs(t4.value3:GetPlayers())
-                            repeat
-                                repeat
-                                    if not g1360 then
-                                        v1359, v1361 = v1357(v1358, v1359)
-                                    end
-
-                                    if g1360 or not v1359 then
-                                        g1360 = false
-
-                                        if v1356 and (v1356.Character and v1356.Character:FindFirstChild("HumanoidRootPart")) and (t4.value10.Character and t4.value10.Character:FindFirstChild("HumanoidRootPart")) then
-                                            t4.value10.Character.HumanoidRootPart.CFrame = v1356.Character.HumanoidRootPart.CFrame
-                                        end
-
-                                        g1339 = true
-                                    end
-
-                                    if g1339 then
-                                        break
-                                    end
-                                until num == v1361.UserId
-
-                                if g1339 then
-                                    break
-                                end
-
-                                v1356 = v1361
-                                g1360 = true
-                            until not g1360
-                        until not g1339
-
-                        if g1343 then
-                            g1343 = false
-
-                            continue
+                    if senderUid ~= t4.value18 then
+                        local preview = content
+                        if preview:match('^%[STICKER:%d+%]$') then
+                            preview = '🎭 Sent a sticker'
+                        elseif #preview > 80 then
+                            preview = preview:sub(1, 80)
                         end
+                        pcall(function()
+                            v279(sender, preview, isDM, isSystem, senderUid, autoClean)
+                        end)
                     end
-
-                    if v1338 then
-                        if v1338.IsDeleted and t22.value40[v] then
-                            local v1362 = t22.value40[v]
-                            local v1363 = v1362 and v1362.Parent
-
-                            t22.value40[v] = nil
-
-                            if v1362 then
-                                t22.value3[v1362] = nil
-                            end
-
-                            if v1362 then
-                                t22.value4[v1362] = nil
-                            end
-
-                            local t56 = {}
-
-                            for _, v3 in ipairs(t22.value39) do
-                                if v3 ~= v then
-                                    table.insert(t56, v3)
-                                end
-                            end
-
-                            local v1367 = v1363
-
-                            t22.value39 = t56
-
-                            if v1363 then
-                                v1367 = v1363.Parent
-                            end
-
-                            if v1367 then
-                                v1363:Destroy()
-                            end
-                        end
-
-                        if not v1338.IsDeleted and (t22.value40[v] and v1338.Content) then
-                            local v1368 = t22.value40[v]
-                            local v1369 = t22.value42(v1338.Content)
-
-                            if t22.value3[v1368] then
-                                t22.value3[v1368].msg = v1369
-                            elseif t22.value4[v1368] then
-                                t22.value4[v1368].msg = v1369
-                            else
-                                local v1370 = v1368 and v1368.Text or ""
-                                local v1371 = string.find(v1370, ": ", 1, true)
-
-                                if v1371 then
-                                    local v1372 = string.sub(v1370, 1, v1371 + 1) .. v1369
-
-                                    if v1372 ~= v1370 then
-                                        v1368.Text = v1372
-                                    end
-                                end
-                            end
-                        end
-                    end
+                    t22.value37 = os.time()
                 end
             end
-        end
-    end)
-end
-function t1.value1()
-    local v937 = syn and syn.request or (http and http.request or request)
 
-    if not v937 then
-        return
+            -- Mark every valid record as seen so one malformed/filtered record
+            -- cannot block later messages in the same Firebase response.
+            t22.value5[id] = true
+        end
     end
-
-    pcall(function()
-        local v1373 = v937({
-			Url = t4.value25 .. ".json",
-			Method = "GET"
-		})
-
-        if v1373 and (v1373.Success and v1373.Body ~= "null") then
-            local ok, result = pcall(t4.value2.JSONDecode, t4.value2, v1373.Body)
-
-            if ok then
-                ok = type(result) == "table"
-            end
-
-            if ok then
-                local timestamp = os.time()
-
-                for k, v in pairs(result) do
-                    local num = tonumber(k)
-
-                    if num and type(v) == "table" then
-                        if v.expiresAt and timestamp < v.expiresAt then
-                            local v1380 = t22.value1[num]
-
-                            if not v1380 or (v1380.title ~= v.title or v1380.expiresAt ~= v.expiresAt) then
-                                local value1 = t22.value1
-                                local title = v.title
-                                local expiresAt = v.expiresAt
-                                local color = v.color
-
-                                value1[num] = {
-									title = title,
-									expiresAt = expiresAt,
-									color = color
-								}
-                                t22.value2[num] = nil
-                            end
-                        elseif t22.value1[num] then
-                            t22.value1[num] = nil
-                            t22.value2[num] = nil
-                        end
-                    end
-                end
-
-                for k, _ in pairs(t22.value1) do
-                    local v1387 = k
-
-                    if not result[tostring(v1387)] then
-                        t22.value1[v1387] = nil
-                        t22.value2[v1387] = nil
-                    end
-                end
-
-                return
-            end
-        elseif v1373 and (v1373.Success and v1373.Body == "null") then
-            for k, _ in pairs(t22.value1) do
-                t22.value1[k] = nil
-                t22.value2[k] = nil
-            end
-        end
-    end)
 end
+
 t22.value135 = t1.value3
 t22.value136 = t1.value2
 t22.value137 = t1.value1
