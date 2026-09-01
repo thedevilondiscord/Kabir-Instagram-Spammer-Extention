@@ -669,17 +669,26 @@ local Header = create("Frame", {
     )
 }, Main)
 
+local HeaderBrand = create("ImageLabel", {
+    Name = "HeaderBrand",
+    Size = UDim2.fromOffset(30, 30),
+    Position = UDim2.fromOffset(18, 6),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    Image = "rbxthumb://type=Asset&id=6379534047&w=150&h=150",
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 11
+}, Header)
+
+create("UICorner", {
+    CornerRadius = UDim.new(1, 0)
+}, HeaderBrand)
+
 local Title = makeLabel(
     Header,
     "SAIKI MUSIC",
-    UDim2.fromOffset(
-        220,
-        38
-    ),
-    UDim2.fromOffset(
-        18,
-        5
-    ),
+    UDim2.fromOffset(205, 38),
+    UDim2.fromOffset(54, 5),
     Enum.Font.GothamBold,
     18
 )
@@ -687,14 +696,8 @@ local Title = makeLabel(
 local Subtitle = makeLabel(
     Header,
     "SPOTIFY • SAIKI EDITION",
-    UDim2.fromOffset(
-        220,
-        18
-    ),
-    UDim2.fromOffset(
-        19,
-        31
-    ),
+    UDim2.fromOffset(205, 18),
+    UDim2.fromOffset(55, 31),
     Enum.Font.Gotham,
     7
 )
@@ -718,6 +721,7 @@ local StatusLabel = makeLabel(
 
 StatusLabel.TextXAlignment =
     Enum.TextXAlignment.Right
+StatusLabel.Visible = false
 
 ----------------------------------------------------------------
 -- ANCHOR / UNANCHOR BUTTON
@@ -1277,14 +1281,8 @@ create("UICorner", {
 local SongTitle = makeLabel(
     PlayerPanel,
     "Nothing playing",
-    UDim2.fromOffset(
-        158,
-        48
-    ),
-    UDim2.fromOffset(
-        163,
-        22
-    ),
+    UDim2.fromOffset(158, 52),
+    UDim2.fromOffset(163, 67),
     Enum.Font.GothamBold,
     14
 )
@@ -1292,30 +1290,6 @@ local SongTitle = makeLabel(
 SongTitle.TextWrapped = true
 SongTitle.TextTruncate =
     Enum.TextTruncate.AtEnd
-
-local SongCategory = makeLabel(
-    PlayerPanel,
-    "Choose a song",
-    UDim2.fromOffset(
-        155,
-        32
-    ),
-    UDim2.fromOffset(
-        163,
-        72
-    ),
-    Enum.Font.Gotham,
-    8
-)
-
-SongCategory.TextColor3 =
-    Color3.fromRGB(
-        125,
-        110,
-        135
-    )
-
-SongCategory.TextWrapped = true
 
 ----------------------------------------------------------------
 -- LIKE
@@ -1734,15 +1708,9 @@ create("UIStroke", {
 ----------------------------------------------------------------
 
 local SkateButton = create("TextButton", {
-    Size = UDim2.fromOffset(
-        105,
-        30
-    ),
+    Size = UDim2.fromOffset(103, 30),
 
-    Position = UDim2.fromOffset(
-        115,
-        250
-    ),
+    Position = UDim2.fromOffset(114, 250),
 
     Text = "◆ SKATE",
 
@@ -1771,15 +1739,9 @@ local SkateButton = create("TextButton", {
 }, PlayerPanel)
 
 local SegwayButton = create("TextButton", {
-    Size = UDim2.fromOffset(
-        105,
-        30
-    ),
+    Size = UDim2.fromOffset(103, 30),
 
-    Position = UDim2.fromOffset(
-        226,
-        250
-    ),
+    Position = UDim2.fromOffset(222, 250),
 
     Text = "◆ SEGWAY",
 
@@ -1961,16 +1923,21 @@ local CHERRY_LEAVES = {
     "rbxthumb://type=Asset&id=125300690495092&w=420&h=420"
 }
 
+local SNOW_FLAKES = {
+    "rbxthumb://type=Asset&id=103375221051022&w=420&h=420",
+    "rbxthumb://type=Asset&id=138994720&w=420&h=420"
+}
+
 local cherryLeaves = {}
 local cherryRandom = Random.new()
 local cherryFade = 0
 local cherryVisible = true
 
-for i = 1, 22 do
+for i = 1, 24 do
     local leaf = create("ImageLabel", {
         Name = "CherryLeaf_" .. tostring(i),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Size = UDim2.fromOffset(cherryRandom:NextInteger(13, 28), cherryRandom:NextInteger(13, 28)),
+        Size = UDim2.fromOffset(cherryRandom:NextInteger(14, 30), cherryRandom:NextInteger(14, 30)),
         Position = UDim2.new(cherryRandom:NextNumber(0, 1), 0, cherryRandom:NextNumber(-0.20, 1), 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -1990,6 +1957,7 @@ for i = 1, 22 do
         swaySpeed = cherryRandom:NextNumber(0.8, 1.7),
         phase = cherryRandom:NextNumber(0, math.pi * 2),
         rotationSpeed = cherryRandom:NextNumber(-75, 75),
+        snowRotationSpeed = cherryRandom:NextNumber(-10, 10),
         baseTransparency = cherryRandom:NextNumber(0.02, 0.12)
     })
 end
@@ -2193,9 +2161,10 @@ applyTheme = function()
         ThemeStroke.Color = Color3.fromRGB(215, 180, 205)
         ThemeTooltip.Text = "LIGHT THEME"
 
-        for _, leafData in ipairs(cherryLeaves) do
-            leafData.object.ImageTransparency = leafData.baseTransparency
-            leafData.object.ImageColor3 = Color3.fromRGB(255, 190, 220)
+        for i, leafData in ipairs(cherryLeaves) do
+            leafData.object.Image = CHERRY_LEAVES[((i - 1) % #CHERRY_LEAVES) + 1]
+            leafData.object.ImageTransparency = math.clamp(leafData.baseTransparency - 0.10, 0.05, 0.88)
+            leafData.object.ImageColor3 = Color3.fromRGB(255, 150, 205)
         end
     else
         local darkBase = Color3.fromRGB(13, 16, 25)
@@ -2224,14 +2193,19 @@ applyTheme = function()
                     object.BackgroundColor3 = darkBase
                 elseif object.Name == "Play" then
                     object.BackgroundColor3 = Color3.fromRGB(112, 49, 82)
+                elseif object:IsA("TextButton")
+                    or object:IsA("TextBox") then
+                    object.BackgroundColor3 = darkRaised
+                    object.BackgroundTransparency = 0.04
                 else
                     object.BackgroundColor3 = darkSurface
                 end
             end
 
             if object:IsA("UIStroke") then
-                object.Color = Color3.fromRGB(122, 91, 128)
-                object.Transparency = 0.12
+                object.Color = Color3.fromRGB(150, 108, 157)
+                object.Transparency = 0.04
+                object.Thickness = math.max(object.Thickness, 1)
             end
         end
 
@@ -2242,9 +2216,11 @@ applyTheme = function()
         ThemeStroke.Color = accent
         ThemeTooltip.Text = "DARK THEME"
 
-        for _, leafData in ipairs(cherryLeaves) do
-            leafData.object.ImageTransparency = math.max(0, leafData.baseTransparency - 0.04)
-            leafData.object.ImageColor3 = Color3.fromRGB(255, 165, 210)
+        for i, leafData in ipairs(cherryLeaves) do
+            leafData.object.Image = SNOW_FLAKES[((i - 1) % #SNOW_FLAKES) + 1]
+            leafData.object.ImageTransparency = math.clamp(leafData.baseTransparency - 0.16, 0.02, 0.72)
+            leafData.object.ImageColor3 = Color3.fromRGB(255, 255, 255)
+            leafData.rotationSpeed = leafData.snowRotationSpeed
         end
     end
 
@@ -3121,8 +3097,6 @@ local function updatePlayerUI()
         SongTitle.Text =
             "Nothing playing"
 
-        SongCategory.Text =
-            "Choose a song"
 
         Cover.Image =
             "rbxassetid://"
@@ -3137,11 +3111,6 @@ local function updatePlayerUI()
 
     SongTitle.Text =
         State.current.name
-
-    SongCategory.Text =
-        tostring(
-            State.current.category
-        )
 
     setCover(
         State.current
@@ -4609,7 +4578,7 @@ RunService.RenderStepped:Connect(
 
         --------------------------------------------------------
         --------------------------------------------------------
-        -- Cherry blossom flurry
+        -- Theme ambient particles: cherry blossoms in Light, snow in Dark
         --------------------------------------------------------
 
         if cherryVisible and AmbientLayer.Visible then
@@ -4621,21 +4590,29 @@ RunService.RenderStepped:Connect(
                     leafData.y = cherryRandom:NextNumber(-0.18, -0.05)
                     leafData.x = cherryRandom:NextNumber(-0.05, 1.05)
                     leafData.phase = cherryRandom:NextNumber(0, math.pi * 2)
-                    leafData.baseTransparency = cherryRandom:NextNumber(0.08, 0.30)
+                    leafData.baseTransparency = State.theme == "Dark"
+                        and cherryRandom:NextNumber(0.10, 0.22)
+                        or cherryRandom:NextNumber(0.08, 0.22)
                 end
 
-                local sway = math.sin(gradientTime * leafData.swaySpeed + leafData.phase) * leafData.sway
+                local drift
+                if State.theme == "Dark" then
+                    drift = math.sin(gradientTime * leafData.swaySpeed + leafData.phase) * leafData.sway * 0.22
+                else
+                    drift = math.sin(gradientTime * leafData.swaySpeed + leafData.phase) * leafData.sway
+                end
+
                 local fadeNearBottom = math.clamp((leafData.y - 0.78) / 0.34, 0, 1)
 
                 leaf.Position = UDim2.new(
-                    leafData.x + sway,
+                    leafData.x + drift,
                     0,
                     leafData.y,
                     0
                 )
-                leaf.Rotation += leafData.rotationSpeed * dt
+                leaf.Rotation += (State.theme == "Dark" and leafData.snowRotationSpeed or leafData.rotationSpeed) * dt
                 leaf.ImageTransparency = math.clamp(
-                    leafData.baseTransparency + fadeNearBottom * 0.70,
+                    leafData.baseTransparency + fadeNearBottom * (State.theme == "Dark" and 0.78 or 0.70),
                     0,
                     1
                 )
