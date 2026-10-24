@@ -1103,9 +1103,10 @@ local reached,target=i<=tier,i==tier+1
 local row=new("Frame",{Size=U2n(1,0,0,60),BackgroundColor3=WHITE,BackgroundTransparency=reached and .9 or .95,LayoutOrder=3+i,Parent=sc},{corner(14),stroke(target and .78 or .92)})new("TextLabel",{Position=U2o(12,10),Size=U2o(34,34),BackgroundColor3=TCOL[i],BackgroundTransparency=reached and 0 or .72,Text=ROMAN[i],Font=T.fontB,TextSize=14,TextColor3=Color3.fromRGB(14,16,24),Parent=row},{corner(17)})new("TextLabel",{Position=U2o(58,9),Size=U2n(1,-170,0,18),BackgroundTransparency=1,Text="Tier "..ROMAN[i]..(i==1 and"  ·  start"or("  ·  "..CONFIG.TIER_AT[i].." followers")),Font=T.fontB,TextSize=13,TextColor3=reached and T.text or T.mut,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=row})local rw=CONFIG.TIER_REWARDS and CONFIG.TIER_REWARDS[i]new("TextLabel",{Position=U2o(58,28),Size=U2n(1,-70,0,16),BackgroundTransparency=1,Text=(rw and#rw>0)and table.concat(rw,"  •  ")or"Starting tier",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=row})new("TextLabel",{AnchorPoint=Vector2.new(1,0),Position=U2n(1,-12,0,10),Size=U2o(100,16),BackgroundTransparency=1,Text=reached and"UNLOCKED"or(target and(cnt.."/"..CONFIG.TIER_AT[i])or"LOCKED"),Font=T.fontB,TextSize=11,TextColor3=reached and TCOL[i]or T.mut,TextXAlignment=Enum.TextXAlignment.Right,Parent=row})if target then
 local tb=new("Frame",{Position=U2n(0,58,0,51),Size=U2n(1,-70,0,4),BackgroundColor3=WHITE,BackgroundTransparency=.88,Parent=row},{corner(2)})new("Frame",{Size=U2s(pct,1),BackgroundColor3=WHITE,Parent=tb},{corner(2),grad(0)})end
 end
-addEmpty(sc,"Auras, titles, avatar frames and the Announcement command (!anc) are live.",9,40)addHeader(sc,"Following",10,tostring(nFollowing))local fl={}for id,e in pairs(FS.following)do fl[#fl+1]={id=id,n=e.n,u=e.u}end
-table.sort(fl,function(a,b)return a.n:lower()<b.n:lower()end)if#fl==0 then addEmpty(sc,"You're not following anyone yet.\nOpen a DM and tap Follow.",11,50)end
-for i,e in ipairs(fl)do personRow(e,11+i,true)end
+addEmpty(sc,"Auras, titles, avatar frames and the Announcement command (!anc) are live.",9,40)addHeader(sc,"Your tags",10)local tagCard=new("Frame",{Size=U2n(1,0,0,60),BackgroundColor3=WHITE,BackgroundTransparency=.94,LayoutOrder=11,Parent=sc},{corner(14),stroke(.92)})if T.tagsView then T.tagsView(tagCard,"tab")end
+addHeader(sc,"Following",12,tostring(nFollowing))local fl={}for id,e in pairs(FS.following)do fl[#fl+1]={id=id,n=e.n,u=e.u}end
+table.sort(fl,function(a,b)return a.n:lower()<b.n:lower()end)if#fl==0 then addEmpty(sc,"You're not following anyone yet.\nOpen a DM and tap Follow.",13,50)end
+for i,e in ipairs(fl)do personRow(e,13+i,true)end
 addHeader(sc,"Followers",1000,tostring(#FS.followers))if#FS.followers==0 then addEmpty(sc,"No followers yet.",1001,36)end
 for i,e in ipairs(FS.followers)do
 if i>CONFIG.TIER_AT[#CONFIG.TIER_AT]+30 then break end
@@ -1195,13 +1196,80 @@ else
 bStamp=os.clock()-60
 end
 bBusy=false
-pcall(repaintAll)if T.refreshFrames then pcall(T.refreshFrames)end
+pcall(repaintAll)if T.refreshTagViews then pcall(T.refreshTagViews)end
+if T.refreshFrames then pcall(T.refreshFrames)end
 end)end
 function T.boardCount(id)return counts[id]end
 function T.boardRank(id)return rankOf[id]end
-function T.repaintTags()repaintAll()end
+function T.repaintTags()repaintAll()if T.refreshTagViews then pcall(T.refreshTagViews)end end
 function T.boardLoaded()return T.boardOk==true end
 function T.boardNeeded()if os.clock()-bStamp>90 then loadBoard()end end
+local tagViews=setmetatable({},{__mode="k"})
+function T.tagList(id)id=tostring(id)
+local out={}
+local n=counts[id]or(FS.cache[id]and FS.cache[id].c)or 0
+local tier=FS.tierOf(n)
+local ttl=CONFIG.TITLES and CONFIG.TITLES[tier]or""
+if ttl~=""then out[#out+1]={text=ttl,col=FS.TCOL[tier],strong=false,size=10,how="Tier "..FS.ROMAN[tier].." tag  ·  unlocked at "..CONFIG.TIER_AT[tier].." followers"}end
+local ct=T.customTitle and T.customTitle[id]
+if ct and ct~=""then
+local cc=Color3.fromRGB(255,105,180)
+local hx=T.customTitleColor and T.customTitleColor[id]
+if hx then local okc,c3=pcall(Color3.fromHex,hx)if okc and c3 then cc=c3 end end
+out[#out+1]={text=ct,col=cc,strong=true,size=13,how="Custom tag  ·  given by a moderator"}
+end
+local rk=rankOf[id]
+if rk then out[#out+1]={text="#top"..rk,col=METAL[rk]or T.accB,strong=true,size=10,how="Leaderboard tag  ·  you are #"..rk.." on Rank"}end
+return out,tier
+end
+local function fillTags(card,mode)
+for _,c in ipairs(card:GetChildren())do if c:IsA("GuiObject")then c:Destroy()end end
+local mine,tier=T.tagList(ME)
+local nextT=CONFIG.TITLES and CONFIG.TITLES[tier+1]
+local nextAt=CONFIG.TIER_AT[tier+1]
+if mode=="popup"then
+new("TextLabel",{Size=U2o(120,14),BackgroundTransparency=1,Text="YOUR TAGS",Font=T.fontB,TextSize=11,TextColor3=T.mut,TextXAlignment=XAL,Parent=card})
+if nextT and nextT~=""and nextAt then
+new("TextLabel",{AnchorPoint=Vector2.new(1,0),Position=U2n(1,0,0,0),Size=U2o(150,14),BackgroundTransparency=1,Text="Next: "..nextT.."  ·  "..nextAt,Font=T.font,TextSize=11,TextColor3=T.mut,TextXAlignment=Enum.TextXAlignment.Right,Parent=card})
+end
+local holder=new("Frame",{Position=U2o(0,20),Size=U2n(1,0,0,50),BackgroundTransparency=1,Parent=card})
+local lay=new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,6),Parent=holder})
+pcall(function()lay.Wraps=true end)
+if#mine==0 then
+new("TextLabel",{Size=U2o(200,20),BackgroundTransparency=1,Text="No tags yet.",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,Parent=holder})
+end
+for i,t in ipairs(mine)do pill(holder,i,t.text,t.col,t.strong,t.size)end
+return
+end
+local y=8
+local function row(t,desc,dim)
+local r=new("Frame",{Position=U2o(10,y),Size=U2n(1,-20,0,38),BackgroundTransparency=1,Parent=card})
+local hold=new("Frame",{Size=U2o(170,38),BackgroundTransparency=1,ClipsDescendants=true,Parent=r},{new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center})})
+local p=pill(hold,1,t.text,t.col,t.strong,t.size)
+if dim then p.BackgroundTransparency=.93;p.TextTransparency=.5 end
+new("TextLabel",{Position=U2o(178,0),Size=U2n(1,-178,1,0),BackgroundTransparency=1,Text=desc,Font=T.font,TextSize=11,TextColor3=T.mut,TextWrapped=true,TextXAlignment=XAL,Parent=r})
+y=y+40
+end
+if#mine==0 then
+new("TextLabel",{Position=U2o(14,y),Size=U2n(1,-28,0,20),BackgroundTransparency=1,Text="You don't have any tags yet. Here is what you can unlock:",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,Parent=card})
+y=y+26
+end
+for _,t in ipairs(mine)do row(t,t.how,false)end
+for k=tier+1,#CONFIG.TIER_AT do
+local ttl=CONFIG.TITLES and CONFIG.TITLES[k]or""
+if ttl~=""then row({text=ttl,col=FS.TCOL[k],strong=false,size=10},"Locked  ·  unlocks at Tier "..FS.ROMAN[k].." ("..CONFIG.TIER_AT[k].." followers)",true)end
+end
+if not rankOf[ME]then row({text="#top",col=T.accB,strong=true,size=10},"Locked  ·  reach the top "..tostring(CONFIG.TOP_RANK_TAG or 50).." on the Rank tab",true)end
+card.Size=U2n(1,0,0,y+8)
+end
+function T.refreshTagViews()for c,m in pairs(tagViews)do
+if c.Parent then pcall(fillTags,c,m)else tagViews[c]=nil end
+end
+end
+function T.tagsView(card,mode)tagViews[card]=mode
+pcall(fillTags,card,mode)
+if T.boardNeeded then T.boardNeeded()end
+end
 function T.decorateName(row,id)reg[#reg+1]={row=row,id=id}paint(reg[#reg])if os.clock()-bStamp>90 then loadBoard()end
 end
 task.spawn(function()while true do
@@ -1240,7 +1308,7 @@ tween(c,.15,{GroupTransparency=1})task.delay(.17,function()r:Destroy()end)end
 function T.openProfile(id,name,user)id=tostring(id or"")if not id:match("^%d+$")or id=="0"then return end
 if closePicker then closePicker()end
 if closeMenu then closeMenu()end
-T.closeProfile(true)local dn,un=nameOf(id)name=(name and name~="")and name or dn or("User "..id)user=(user and user~="")and user or un or""local isMe=(id==ME)local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=30,Parent=win})root.Activated:Connect(function()T.closeProfile()end)local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(300,280),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=31,Parent=root},{corner(20),stroke(.78)})new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})P.root,P.card,P.id=root,card,id
+T.closeProfile(true)local dn,un=nameOf(id)name=(name and name~="")and name or dn or("User "..id)user=(user and user~="")and user or un or""local isMe=(id==ME)local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=30,Parent=win})root.Activated:Connect(function()T.closeProfile()end)local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(300,isMe and 350 or 280),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=31,Parent=root},{corner(20),stroke(.78)})new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})P.root,P.card,P.id=root,card,id
 new("ImageLabel",{Position=U2o(18,18),Size=U2o(64,64),BackgroundColor3=WHITE,BackgroundTransparency=.88,Image=thumb(id),Parent=card},{corner(32),stroke(.55,2)})new("TextLabel",{Position=U2o(98,20),Size=U2o(166,22),BackgroundTransparency=1,Text=name,Font=T.fontB,TextSize=17,TextColor3=T.text,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local userLbl=new("TextLabel",{Position=U2o(98,43),Size=U2o(166,16),BackgroundTransparency=1,Text=(user~="")and("@"..user)or"",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local badge=new("TextLabel",{Position=U2o(94,64),Size=U2o(88,20),BackgroundColor3=TCOL[1],Text="TIER …",Font=T.fontB,TextSize=11,TextColor3=INK,Parent=card},{corner(10)})local closeX=new("TextButton",{AnchorPoint=Vector2.new(1,0),Position=U2n(1,-8,0,8),Size=U2o(26,26),BackgroundTransparency=1,Text="×",Font=T.fontB,TextSize=20,TextColor3=T.mut,AutoButtonColor=false,Parent=card})closeX.Activated:Connect(function()T.closeProfile()end)local folLbl=new("TextLabel",{Position=U2o(18,94),Size=U2o(120,38),BackgroundTransparency=1,RichText=true,Text="",Font=T.font,TextSize=12,TextColor3=T.text,TextXAlignment=XAL,Parent=card})local ingLbl=new("TextLabel",{Position=U2o(150,94),Size=U2o(120,38),BackgroundTransparency=1,RichText=true,Text="",Font=T.font,TextSize=12,TextColor3=T.text,TextXAlignment=XAL,Parent=card})local nextLbl=new("TextLabel",{Position=U2o(18,136),Size=U2o(264,16),BackgroundTransparency=1,Text="",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,Parent=card})local bar=new("Frame",{Position=U2o(18,156),Size=U2o(264,5),BackgroundColor3=WHITE,BackgroundTransparency=.88,Parent=card},{corner(3)})local fill=new("Frame",{Size=U2s(0,1),BackgroundColor3=WHITE,Parent=bar},{corner(3),grad(0)})local statusLbl=new("TextLabel",{Position=U2o(18,165),Size=U2o(264,14),BackgroundTransparency=1,Text="",Font=T.font,TextSize=11,TextColor3=T.red,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local followBtn,dmBtn
 followBtn=new("TextButton",{Position=U2o(18,184),Size=U2o(170,36),BackgroundColor3=T.accA,Text="Follow",Font=T.fontB,TextSize=14,TextColor3=WHITE,TextTransparency=0,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(18)})dmBtn=new("TextButton",{Position=U2o(196,184),Size=U2o(86,36),BackgroundColor3=WHITE,BackgroundTransparency=.86,Text="DM",Font=T.fontB,TextSize=14,TextColor3=T.text,TextTransparency=0,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(18),stroke(.85)})dmBtn.Activated:Connect(function()if isMe then
 statusLbl.Text="can't DM yourself lol"return
@@ -1253,6 +1321,10 @@ if isMe then
 local bb=new("TextButton",{Position=U2o(18,230),Size=U2o(264,34),BackgroundColor3=WHITE,BackgroundTransparency=.9,Text="",Font=T.fontB,TextSize=13,TextColor3=T.text,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(17),stroke(.85)})
 bb.Text="Blocked users ("..T.blockCount()..")"
 bb.Activated:Connect(function()if T.openBlocked then T.openBlocked()end end)
+if T.tagsView then
+local tv=new("Frame",{Position=U2o(18,272),Size=U2o(264,72),BackgroundTransparency=1,ZIndex=5,Parent=card})
+T.tagsView(tv,"popup")
+end
 else
 local canBan=T.isMod and T.isMod(ME)and not T.isMod(id)
 local blockBtn=new("TextButton",{Position=U2o(18,230),Size=U2o(canBan and 126 or 264,34),BackgroundColor3=WHITE,BackgroundTransparency=.9,Text="",Font=T.fontB,TextSize=13,TextColor3=T.red,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(17),stroke(.85)})
