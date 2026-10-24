@@ -17,6 +17,11 @@
 -- SECURITY NOTE: the "moderators only" check in this file hides/blocks the UI, but the real lock has to live in
 -- the sxikiflowsys database rules (only moderator accounts may delete other people's follower rows).
 local H = ... or (getgenv and getgenv() or _G).SaikiRechatPlugin
+if type(H) ~= "table" then
+	warn("[SAIKI FOLLOWERS] not loaded by Saiki Rechat. This file is a plugin: it must be listed in the main script (PLUGIN_FILES + plug(...)) and started by it. Running it on its own does nothing.")
+	return
+end
+warn("[SAIKI FOLLOWERS] plugin started")
 local T, FS, new, corner, stroke, grad, tween = H.T, H.FS, H.new, H.corner, H.stroke, H.grad, H.tween
 local newScroll, addHeader, addEmpty, thumb, ME = H.newScroll, H.addHeader, H.addEmpty, H.thumb, H.me
 local CFG = H.CONFIG
@@ -969,8 +974,14 @@ end)
 
 -- the moderator list loads a moment after Saiki Rechat starts, so keep checking; the button only exists for moderators
 task.spawn(function()
+	local t0, told = os.clock(), false
 	while alive and H.gui.Parent do
 		local m = isMod()
+		if m and not told then told = true warn("[SAIKI FOLLOWERS] moderator confirmed, button shown under the chat bubble") end
+		if not m and not told and os.clock() - t0 > 20 then
+			told = true
+			warn("[SAIKI FOLLOWERS] you are not in the moderator list (MODS_URL), so the button stays hidden. isMod=" .. tostring(T.isMod ~= nil))
+		end
 		if entry.Visible ~= m then entry.Visible = m end
 		if not m and (isOpen or win.Visible) then
 			isOpen = false
