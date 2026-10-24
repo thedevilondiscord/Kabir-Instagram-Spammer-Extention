@@ -867,7 +867,8 @@ if not REQUEST then
 views.dm.add({uid=ME,name=LP.DisplayName,text=p.text or"",stk=p.stk,reply=p.reply})return
 end
 local s,partner=dmStream,dm.partner
-task.spawn(function()T.dmId()local ok,res,raw,code=dbRequest("POST",s.path,payload(p),dmAuth,DM_FIREBASE_DB)if ok and type(res)=="table"and res.name then
+task.spawn(function()T.dmId()if T.blockedBy and T.blockedBy(partner)then T.blockedPopup(dm.name)return end
+local ok,res,raw,code=dbRequest("POST",s.path,payload(p),dmAuth,DM_FIREBASE_DB)if ok and type(res)=="table"and res.name then
 if s==dmStream and not s.seen[res.name]then
 s.seen[res.name]=true
 local st={k=res.name,u=ME,t=p.text or"",s=p.stk,ts=os.time()*1000,rk=p.reply and p.reply.k,rn=p.reply and p.reply.n,rt=p.reply and p.reply.t}if activeConv then activeConv[#activeConv+1]=st;activeDirty=true end
@@ -888,7 +889,8 @@ local e=touchIndex(dm.partner,st,dm.name)if isOpen and cur==2 and thread.Visible
 renderStored(st)if uid~=ME and not(isOpen and cur==2 and thread.Visible)and T.notify then
 T.notify("dm"..tostring(dm.partner),"New DM  ·  "..tostring(dm.name or"Someone"),st.s and"Sticker"or st.t)end
 end
-function openThread(id,name,user)if closePicker then closePicker()end
+function openThread(id,name,user)if T.blockedBy and T.blockedBy(id)then T.blockedPopup(name)return end
+if closePicker then closePicker()end
 dm.partner,dm.name=id,name
 local pair=pairKey(ME,id)activeConv,activeDirty=loadConv(id),false
 dmStream=newStream("/dm/"..pair,dmAuth,DM_FIREBASE_DB)dmStream.rpath="/dmreact/"..pair
@@ -1258,7 +1260,7 @@ local function paintBlock()local b=T.isBlocked(id)blockBtn.Text=b and"Unblock"or
 paintBlock()
 blockBtn.Activated:Connect(function()
 if T.isBlocked(id)then T.unblock(id)say("Unblocked "..name..".",true)
-else T.block(id,name,user)say("Blocked. Hidden on this device only.",true)end
+else T.block(id,name,user)say("Blocked. Hidden for you, and they can't DM you.",true)end
 paintBlock()
 end)
 if canBan then
@@ -1475,7 +1477,7 @@ action("Reply",2,function()view.setReply(item)end)if hasCopy then
 action("Copy text",3,function()local fn=setclipboard or toclipboard or(syn and syn.write_clipboard)if fn and pcall(fn,item.text)then toast("Copied")else toast("Clipboard not supported here")end
 end)end
 if canBlock then action("Block "..cut(tostring(item.name or"user"),14),4,function()
-if T.block(item.uid,item.name)then toast("Blocked. Hidden on this device only")end
+if T.block(item.uid,item.name)then toast("Blocked. They can't DM you now")end
 end)end
 tween(card,.2,{GroupTransparency=0,Position=U2o(x,y)})end
 local function pollReactions(path,tAuth,base,view)if not path then return end
@@ -1947,6 +1949,69 @@ tween(p.card,.15,{GroupTransparency=1})
 task.delay(.17,function()p.root:Destroy()end)
 end
 function T.closeBlocked()closePanel()end
+local byCache={}
+function T.blockedBy(id)id=tostring(id)
+if not REQUEST or id==ME or not id:match("^%d+$")then return false end
+local c=byCache[id]if c and os.clock()-c.t<15 then return c.v end
+T.dmId()
+local ok,data,_,code=dbRequest("GET","/blocks/"..id.."/"..ME,nil,dmAuth,DM_FIREBASE_DB)
+local v=ok and type(data)=="table"
+if ok then byCache[id]={v=v,t=os.clock()}end
+return v
+end
+local popup
+function T.blockedPopup(name)
+if popup and popup.Parent then popup:Destroy()end
+local nm=tostring(name or"This player")
+local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=50,Parent=win})
+popup=root
+local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(290,168),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=51,Parent=root},{corner(20),stroke(.78)})
+new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})
+new("TextLabel",{Position=U2o(18,16),Size=U2o(254,24),BackgroundTransparency=1,Text="You've been blocked",Font=T.fontB,TextSize=17,TextColor3=T.red,TextXAlignment=XAL,Parent=card})
+new("TextLabel",{Position=U2o(18,46),Size=U2o(254,56),BackgroundTransparency=1,Text=nm.." has blocked you, so you can't send them DMs.",Font=T.font,TextSize=13,TextColor3=T.text,TextWrapped=true,TextXAlignment=XAL,TextYAlignment=Enum.TextYAlignment.Top,Parent=card})
+local ok=new("TextButton",{AnchorPoint=Vector2.new(.5,1),Position=U2n(.5,0,1,-16),Size=U2o(120,34),BackgroundColor3=WHITE,BackgroundTransparency=.86,Text="OK",Font=T.fontB,TextSize=13,TextColor3=T.text,AutoButtonColor=false,ZIndex=52,Parent=card},{corner(17)})
+local function close()if popup~=root then return end
+popup=nil
+tween(card,.15,{GroupTransparency=1})
+task.delay(.17,function()root:Destroy()end)
+end
+ok.Activated:Connect(close)
+root.Activated:Connect(close)
+tween(card,.26,{GroupTransparency=0,Position=U2n(.5,0,.5,0)})
+end
+local SYNC_FILE=CACHE.."/blocksync_"..ME..".json"
+local synced={}
+pcall(function()
+if isfile and readfile and isfile(SYNC_FILE)then
+local d=HttpService:JSONDecode(readfile(SYNC_FILE))
+if type(d)=="table"and type(d.ids)=="table"then for id in pairs(d.ids)do synced[tostring(id)]=true end end
+end
+end)
+local function saveSync()pcall(function()if writefile then writefile(SYNC_FILE,HttpService:JSONEncode({ids=synced}))end end)end
+local function pushBlock(id,on)if not REQUEST then return end
+task.spawn(function()T.dmId()
+if on then
+local ok,_,_,code=dbRequest("PUT","/blocks/"..ME.."/"..id,HttpService:JSONEncode({ts=os.time()*1000}),dmAuth,DM_FIREBASE_DB)
+if ok then synced[id]=true;saveSync()end
+else
+local ok=dbRequest("DELETE","/blocks/"..ME.."/"..id,nil,dmAuth,DM_FIREBASE_DB)
+if ok then synced[id]=nil;saveSync()end
+end
+end)
+end
+T.blockHooks[#T.blockHooks+1]=function(id,on)pushBlock(tostring(id),on==true)end
+task.spawn(function()task.wait(8)
+if not REQUEST then return end
+for id in pairs(T.blocked)do
+if not synced[id]then
+T.dmId()
+local ok=dbRequest("PUT","/blocks/"..ME.."/"..id,HttpService:JSONEncode({ts=os.time()*1000}),dmAuth,DM_FIREBASE_DB)
+if ok then synced[id]=true else break end
+task.wait(.3)
+end
+end
+saveSync()
+end)
 function T.openBlocked()
 closePanel()
 if T.closeProfile then pcall(T.closeProfile,true)end
@@ -1956,7 +2021,7 @@ local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.
 new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})
 local title=new("TextLabel",{Position=U2o(18,14),Size=U2o(230,24),BackgroundTransparency=1,Text="Blocked users",Font=T.fontB,TextSize=17,TextColor3=T.text,TextXAlignment=XAL,Parent=card})
 new("TextButton",{AnchorPoint=Vector2.new(1,0),Position=U2n(1,-8,0,8),Size=U2o(26,26),BackgroundTransparency=1,Text="×",Font=T.fontB,TextSize=20,TextColor3=T.mut,AutoButtonColor=false,Parent=card}).Activated:Connect(closePanel)
-new("TextLabel",{Position=U2o(18,40),Size=U2o(264,30),BackgroundTransparency=1,Text="Saved on this device only. Their messages stay hidden from you and nobody is told.",Font=T.font,TextSize=11,TextColor3=T.mut,TextWrapped=true,TextXAlignment=XAL,TextYAlignment=Enum.TextYAlignment.Top,Parent=card})
+new("TextLabel",{Position=U2o(18,40),Size=U2o(264,30),BackgroundTransparency=1,Text="Their messages stay hidden from you. They can't DM you and will see a popup if they try.",Font=T.font,TextSize=11,TextColor3=T.mut,TextWrapped=true,TextXAlignment=XAL,TextYAlignment=Enum.TextYAlignment.Top,Parent=card})
 local list=new("ScrollingFrame",{Position=U2o(10,76),Size=U2o(280,244),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=T.mut,CanvasSize=U2n(),AutomaticCanvasSize=Enum.AutomaticSize.Y,Parent=card},{new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,6)}),new("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8),PaddingTop=UDim.new(0,2)})})
 local function build()
 for _,c in ipairs(list:GetChildren())do
