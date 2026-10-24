@@ -187,6 +187,8 @@ local function kick(msg)pcall(function()LP:Kick(msg)end)end
 do
 local BLOCK_FILE=CACHE.."/blocked_"..ME..".json"
 T.blocked,T.blockHooks,T.bans={},{},{}
+T.alias={["3343561540"]="BannedAgain_Saiki"}
+T.noDM={["3343561540"]=true}
 pcall(function()
 if isfile and readfile and isfile(BLOCK_FILE)then
 local d=HttpService:JSONDecode(readfile(BLOCK_FILE))
@@ -889,7 +891,8 @@ local e=touchIndex(dm.partner,st,dm.name)if isOpen and cur==2 and thread.Visible
 renderStored(st)if uid~=ME and not(isOpen and cur==2 and thread.Visible)and T.notify then
 T.notify("dm"..tostring(dm.partner),"New DM  ·  "..tostring(dm.name or"Someone"),st.s and"Sticker"or st.t)end
 end
-function openThread(id,name,user)if T.blockedBy and T.blockedBy(id)then T.blockedPopup(name)return end
+function openThread(id,name,user)if T.noDM and T.noDM[tostring(id)]and tostring(id)~=ME then T.blockedPopup(name,"Can't DM this player","This player doesn't accept DMs.")return end
+if T.blockedBy and T.blockedBy(id)then T.blockedPopup(name)return end
 if closePicker then closePicker()end
 dm.partner,dm.name=id,name
 local pair=pairKey(ME,id)activeConv,activeDirty=loadConv(id),false
@@ -1277,7 +1280,8 @@ task.wait(30)if(#reg>0 or isOpen)and os.clock()-bStamp>90 then loadBoard()end
 end
 end)end)()end
 ;(function()local ROMAN,TCOL,tierOf=FS.ROMAN,FS.TCOL,FS.tierOf
-local INK=Color3.fromRGB(14,16,24)local function nameOf(id)local pl=Players:GetPlayerByUserId(tonumber(id)or 0)if pl then return pl.DisplayName,pl.Name end
+local INK=Color3.fromRGB(14,16,24)local function nameOf(id)if T.alias and T.alias[tostring(id)]and tostring(id)~=ME then return T.alias[tostring(id)],""end
+local pl=Players:GetPlayerByUserId(tonumber(id)or 0)if pl then return pl.DisplayName,pl.Name end
 local e=index and index[id]if e and e.n and e.n~=""then return e.n,e.u end
 local d=directory and directory[id]if d and d.d and d.d~=""then return d.d,d.n end
 local f=friends and friends[id]if f then return f.d,f.n end
@@ -1308,11 +1312,13 @@ tween(c,.15,{GroupTransparency=1})task.delay(.17,function()r:Destroy()end)end
 function T.openProfile(id,name,user)id=tostring(id or"")if not id:match("^%d+$")or id=="0"then return end
 if closePicker then closePicker()end
 if closeMenu then closeMenu()end
-T.closeProfile(true)local dn,un=nameOf(id)name=(name and name~="")and name or dn or("User "..id)user=(user and user~="")and user or un or""local isMe=(id==ME)local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=30,Parent=win})root.Activated:Connect(function()T.closeProfile()end)local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(300,isMe and 350 or 280),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=31,Parent=root},{corner(20),stroke(.78)})new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})P.root,P.card,P.id=root,card,id
+T.closeProfile(true)local dn,un=nameOf(id)name=(name and name~="")and name or dn or("User "..id)user=(user and user~="")and user or un or""if T.alias and T.alias[id]and id~=ME then name,user=T.alias[id],""end
+local isMe=(id==ME)local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=30,Parent=win})root.Activated:Connect(function()T.closeProfile()end)local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(300,isMe and 350 or 280),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=31,Parent=root},{corner(20),stroke(.78)})new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})P.root,P.card,P.id=root,card,id
 new("ImageLabel",{Position=U2o(18,18),Size=U2o(64,64),BackgroundColor3=WHITE,BackgroundTransparency=.88,Image=thumb(id),Parent=card},{corner(32),stroke(.55,2)})new("TextLabel",{Position=U2o(98,20),Size=U2o(166,22),BackgroundTransparency=1,Text=name,Font=T.fontB,TextSize=17,TextColor3=T.text,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local userLbl=new("TextLabel",{Position=U2o(98,43),Size=U2o(166,16),BackgroundTransparency=1,Text=(user~="")and("@"..user)or"",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local badge=new("TextLabel",{Position=U2o(94,64),Size=U2o(88,20),BackgroundColor3=TCOL[1],Text="TIER …",Font=T.fontB,TextSize=11,TextColor3=INK,Parent=card},{corner(10)})local closeX=new("TextButton",{AnchorPoint=Vector2.new(1,0),Position=U2n(1,-8,0,8),Size=U2o(26,26),BackgroundTransparency=1,Text="×",Font=T.fontB,TextSize=20,TextColor3=T.mut,AutoButtonColor=false,Parent=card})closeX.Activated:Connect(function()T.closeProfile()end)local folLbl=new("TextLabel",{Position=U2o(18,94),Size=U2o(120,38),BackgroundTransparency=1,RichText=true,Text="",Font=T.font,TextSize=12,TextColor3=T.text,TextXAlignment=XAL,Parent=card})local ingLbl=new("TextLabel",{Position=U2o(150,94),Size=U2o(120,38),BackgroundTransparency=1,RichText=true,Text="",Font=T.font,TextSize=12,TextColor3=T.text,TextXAlignment=XAL,Parent=card})local nextLbl=new("TextLabel",{Position=U2o(18,136),Size=U2o(264,16),BackgroundTransparency=1,Text="",Font=T.font,TextSize=12,TextColor3=T.mut,TextXAlignment=XAL,Parent=card})local bar=new("Frame",{Position=U2o(18,156),Size=U2o(264,5),BackgroundColor3=WHITE,BackgroundTransparency=.88,Parent=card},{corner(3)})local fill=new("Frame",{Size=U2s(0,1),BackgroundColor3=WHITE,Parent=bar},{corner(3),grad(0)})local statusLbl=new("TextLabel",{Position=U2o(18,165),Size=U2o(264,14),BackgroundTransparency=1,Text="",Font=T.font,TextSize=11,TextColor3=T.red,TextXAlignment=XAL,TextTruncate=Enum.TextTruncate.AtEnd,Parent=card})local followBtn,dmBtn
 followBtn=new("TextButton",{Position=U2o(18,184),Size=U2o(170,36),BackgroundColor3=T.accA,Text="Follow",Font=T.fontB,TextSize=14,TextColor3=WHITE,TextTransparency=0,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(18)})dmBtn=new("TextButton",{Position=U2o(196,184),Size=U2o(86,36),BackgroundColor3=WHITE,BackgroundTransparency=.86,Text="DM",Font=T.fontB,TextSize=14,TextColor3=T.text,TextTransparency=0,AutoButtonColor=false,ZIndex=5,Parent=card},{corner(18),stroke(.85)})dmBtn.Activated:Connect(function()if isMe then
 statusLbl.Text="can't DM yourself lol"return
 end
+if T.noDM and T.noDM[id]then statusLbl.TextColor3=T.red;statusLbl.Text="This player doesn't accept DMs."return end
 if T.isBlocked(id)then statusLbl.TextColor3=T.red;statusLbl.Text="Unblock them first to DM."return end
 T.closeProfile()showTab(2)openThread(id,name,user)end)
 do
@@ -2032,15 +2038,15 @@ if ok then byCache[id]={v=v,t=os.clock()}end
 return v
 end
 local popup
-function T.blockedPopup(name)
+function T.blockedPopup(name,ttl,msg)
 if popup and popup.Parent then popup:Destroy()end
 local nm=tostring(name or"This player")
 local root=new("TextButton",{Size=U2s(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.55,Text="",AutoButtonColor=false,ZIndex=50,Parent=win})
 popup=root
 local card=new("CanvasGroup",{AnchorPoint=Vector2.new(.5,.5),Position=U2n(.5,0,.5,10),Size=U2o(290,168),BackgroundColor3=T.bg,BackgroundTransparency=.02,GroupTransparency=1,ZIndex=51,Parent=root},{corner(20),stroke(.78)})
 new("TextButton",{Size=U2s(1,1),BackgroundTransparency=1,Text="",AutoButtonColor=false,ZIndex=0,Parent=card})
-new("TextLabel",{Position=U2o(18,16),Size=U2o(254,24),BackgroundTransparency=1,Text="You've been blocked",Font=T.fontB,TextSize=17,TextColor3=T.red,TextXAlignment=XAL,Parent=card})
-new("TextLabel",{Position=U2o(18,46),Size=U2o(254,56),BackgroundTransparency=1,Text=nm.." has blocked you, so you can't send them DMs.",Font=T.font,TextSize=13,TextColor3=T.text,TextWrapped=true,TextXAlignment=XAL,TextYAlignment=Enum.TextYAlignment.Top,Parent=card})
+new("TextLabel",{Position=U2o(18,16),Size=U2o(254,24),BackgroundTransparency=1,Text=ttl or"You've been blocked",Font=T.fontB,TextSize=17,TextColor3=T.red,TextXAlignment=XAL,Parent=card})
+new("TextLabel",{Position=U2o(18,46),Size=U2o(254,56),BackgroundTransparency=1,Text=msg or(nm.." has blocked you, so you can't send them DMs."),Font=T.font,TextSize=13,TextColor3=T.text,TextWrapped=true,TextXAlignment=XAL,TextYAlignment=Enum.TextYAlignment.Top,Parent=card})
 local ok=new("TextButton",{AnchorPoint=Vector2.new(.5,1),Position=U2n(.5,0,1,-16),Size=U2o(120,34),BackgroundColor3=WHITE,BackgroundTransparency=.86,Text="OK",Font=T.fontB,TextSize=13,TextColor3=T.text,AutoButtonColor=false,ZIndex=52,Parent=card},{corner(17)})
 local function close()if popup~=root then return end
 popup=nil
